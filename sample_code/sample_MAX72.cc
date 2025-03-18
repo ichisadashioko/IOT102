@@ -7,10 +7,10 @@
 
 // Define LED Matrix setup
 #define HARDWARE_TYPE MD_MAX72XX::FC16_HW
-#define MAX_DEVICES 4  // 8x32 = 4 modules (each 8x8)
-#define CLK_PIN  13
+#define MAX_DEVICES 4 // 8x32 = 4 modules (each 8x8)
+#define CLK_PIN 13
 #define DATA_PIN 11
-#define CS_PIN   10
+#define CS_PIN 10
 
 // Initialize LED matrix
 MD_Parola matrix = MD_Parola(HARDWARE_TYPE, DATA_PIN, CLK_PIN, CS_PIN, MAX_DEVICES);
@@ -23,12 +23,13 @@ MD_Parola matrix = MD_Parola(HARDWARE_TYPE, DATA_PIN, CLK_PIN, CS_PIN, MAX_DEVIC
 // #define DHTTYPE DHT11  // Change to DHT22 if using DHT22
 // DHT dht(DHTPIN, DHTTYPE);
 
-void setup() {
+void setup()
+{
   Serial.begin(9600);
 
   // Initialize LED matrix
   matrix.begin();
-  matrix.setIntensity(5);  // Adjust brightness (0-15)
+  matrix.setIntensity(5); // Adjust brightness (0-15)
   matrix.displayClear();
 
   // Initialize RTC
@@ -41,7 +42,8 @@ void setup() {
   // dht.begin();
 }
 
-void loop() {
+void loop()
+{
   // Get time from RTC
   // DateTime now = rtc.now();
   char timeStr[10];
@@ -64,11 +66,13 @@ void loop() {
 
   // Display time on LED matrix
   matrix.displayText(timeStr, PA_CENTER, 50, 1000, PA_SCROLL_LEFT);
-  while (!matrix.displayAnimate());  // Wait for scrolling to finish
+  while (!matrix.displayAnimate())
+    ; // Wait for scrolling to finish
 
   // Display temperature on LED matrix
   matrix.displayText(tempStr, PA_CENTER, 50, 1000, PA_SCROLL_LEFT);
-  while (!matrix.displayAnimate());  // Wait for scrolling to finish
+  while (!matrix.displayAnimate())
+    ; // Wait for scrolling to finish
 
-  delay(1000);  // Delay before repeating
+  delay(1000); // Delay before repeating
 }
