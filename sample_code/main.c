@@ -13,13 +13,14 @@
 // define LED Matrix setup
 #define MAX7219_HARDWARE_TYPE MD_MAX72XX::FC16_HW
 #define MAX7219_MAX_DEVICES 4  // 8x32 = 4 modules (each 8x8)
-#define MAX7219_CLK_PIN  13
-#define MAX7219_DATA_PIN 11
-#define MAX7219_CS_PIN   10
 
-// MAX7219:CLK -> R3:13
-// MAX7219:DIN -> R3:11
-// MAX7219:CS -> R3:10
+#define MAX7219_CLK_PIN  8
+#define MAX7219_CS_PIN   7
+#define MAX7219_DATA_PIN 6
+
+// MAX7219:CLK -> R3:8
+// MAX7219:CS -> R3:7
+// MAX7219:DIN -> R3:6
 // initialize LED matrix
 MD_Parola matrix = MD_Parola(
     MAX7219_HARDWARE_TYPE,
