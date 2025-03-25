@@ -95,7 +95,14 @@ void setup()
     lc.clearDisplay(device_idx);
   }
 
-  if (SD.begin(SD_CARD_CS_PIN)) { SD_OK = true; }
+  if (SD.begin(SD_CARD_CS_PIN)) {
+    SD_OK = true;
+    // Sd2Card card;
+    // SdVolume volume;
+    // SdFile root;
+    Serial.println(F("SD OK"));
+
+  }
   else {
     Serial.println(F("init SD failed!"));
     // Serial.println(F("SD"));
@@ -161,4 +168,23 @@ void loop()
   }
 
   delay(1000);
+  analogWrite(L9110_B_1A, LOW);
+
+  for(int led_addr = 0; led_addr < 4; led_addr++){
+    lc.clearDisplay(led_addr);
+    for(int row_idx = 0; row_idx < 8; row_idx++){
+      for(int col_idx = 0; col_idx < 8; col_idx++){
+        lc.setLed(led_addr, row_idx, col_idx, true);
+        // delay(100);
+        // delay(50);
+        // delay(10);
+        delay(10);
+      }
+      lc.clearDisplay(led_addr);
+    }
+    lc.clearDisplay(led_addr);
+  }
+  // delay(3000);
+  analogWrite(L9110_B_1A, 255);
+  delay(3000);
 }
