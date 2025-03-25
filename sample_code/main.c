@@ -9,6 +9,11 @@
 
 // SD card
 #define SD_CARD_CS_PIN 10
+// SD:MISO -> R3:11
+// SD:MOSI -> R3:12
+// SD:SCK -> R3:13
+// SD:CS -> R3:10
+// LM35
 #define LM35_PIN       A0
 
 // define LED Matrix setup
@@ -33,7 +38,25 @@ bool SD_OK     = false;
 // HC-05:TX -> R3:2
 // HC-05:RX -> R3:3
 #include <SoftwareSerial.h>
-SoftwareSerial BTSerial (2,3);
+#define HC05_TX 2
+#define HC05_RX 3
+SoftwareSerial BTSerial(HC05_TX, HC05_RX);
+
+// L9110
+// L9110:B-1A -> R3:5
+// L9110:B-1B -> GND
+// L9110:MOTOR_B:LEFT -> 12V_FAN_GND
+// L9110:MOTOR_B:RIGHT -> 12V_FAN_VCC
+// L9110:GND -> 12V_PSU:GND
+// L9110:VCC -> 12V_PSU:VCC
+
+// |=============================================|
+// |                    L9110                    |
+// | LEFT PIN | RIGHT PIN | LEFT PIN | RIGHT PIN |
+// | MOTOR B              |  MOTOR A             |
+// |=============================================|
+// | B-1A | B-1B |    GND | VCC    | A-1A | A-1B |
+// |=============================================|
 
 double lm35_get_temperature()
 {
