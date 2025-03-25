@@ -561,28 +561,16 @@ void display_number(int led_addr, unsigned char input_number)
   for (unsigned char row_idx = 0; row_idx < 8; row_idx++)
   {
     // lc.setRow(led_addr, row_idx, _LED_8x8_DIGITS[input_number][row_idx]);
-    lc.setRow(led_addr, 7-row_idx, _LED_8x8_DIGITS[input_number][row_idx]);
+    lc.setRow(led_addr, 7 - row_idx, _LED_8x8_DIGITS[input_number][row_idx]);
     // lc.setColumn(led_addr, 7-row_idx, _LED_8x8_DIGITS[input_number][row_idx]);
     // lc.setColumn(led_addr, row_idx, _LED_8x8_DIGITS[input_number][row_idx]);
     // lc.setRow(led_addr, 8-row_idx, _LED_8x8_DIGITS[input_number][row_idx]);
-    for(unsigned char col_idx = 0; col_idx < 8; col_idx++){
-        bool led_state = (_LED_8x8_DIGITS[input_number][row_idx] >> col_idx & 1);
-        lc.setLed(led_addr, 7-row_idx, col_idx, led_state);
+    for (unsigned char col_idx = 0; col_idx < 8; col_idx++)
+    {
+      bool led_state = (_LED_8x8_DIGITS[input_number][row_idx] >> col_idx & 1);
+      lc.setLed(led_addr, 7 - row_idx, col_idx, led_state);
     }
   }
-}
-
-void display_char(int led_idx, char input_char)
-{
-  if (led_idx < 0)
-  {
-    return;
-  }
-  if (led_idx >= MAX7219_MAX_DEVICES)
-  {
-    return;
-  }
-  lc.clearDisplay(led_idx);
 }
 
 void clear_all_led_display()
@@ -625,9 +613,25 @@ void display_C_character(int led_addr)
   lc.clearDisplay(led_addr);
   for (unsigned char row_idx = 0; row_idx < 8; row_idx++)
   {
-    lc.setRow(led_addr, row_idx, _8x8_CHAR_C[row_idx]);
+    // lc.setRow(led_addr, row_idx, _8x8_CHAR_C[row_idx]);
+
+    for (unsigned char col_idx = 0; col_idx < 8; col_idx++)
+    {
+      bool led_state = (_8x8_CHAR_C[row_idx] >> col_idx & 1);
+      lc.setLed(led_addr, 7 - row_idx, col_idx, led_state);
+    }
   }
 }
+
+void led_matrix_put_dot_for_temperature_display()
+{
+  lc.setLed(1, 0, 0, true);
+  //   lc.setLed(1, 1, 0, true);
+  //   lc.setLed(2, 0, 7, true);
+  //   lc.setLed(2, 1, 7, true);
+  lc.setLed(3, 7, 7, true);
+}
+
 void setup()
 {
   Serial.begin(9600);
@@ -646,6 +650,7 @@ void setup()
   for (int device_idx = 0; device_idx < device_count; device_idx++)
   {
     lc.shutdown(device_idx, false);  // Wake up display
+    // TODO change intensity using potentiometer
     lc.setIntensity(device_idx, 0);  // Set brightness (0-15)
     lc.clearDisplay(device_idx);
   }
@@ -705,13 +710,15 @@ void setup()
   // TODO test code
   // display_C_character(0);
   // display_colon(1);
-  display_number(0, 1);
-  display_number(1, 2);
-  display_number(2, 3);
-  display_number(3, 4);
-  while (1)
-  {
-  }
+  //   display_number(0, 9);
+  //   display_number(1, 0);
+  //   display_number(2, 1);
+  //   display_number(3, 8);
+  //   display_C_character(3);
+  //   led_matrix_put_dot_for_temperature_display();
+  //   while (1)
+  //   {
+  //   }
 }
 
 void loop()
@@ -731,9 +738,11 @@ void loop()
   display_number(1, digit_2);
   unsigned char first_presision_digit = (unsigned char)(temp_c * 10.0);
   first_presision_digit               = first_presision_digit % 10;
-  display_number(3, first_presision_digit);
-  // delay(5000);
-  delay(500);
+  display_number(2, first_presision_digit);
+  display_C_character(3);
+  led_matrix_put_dot_for_temperature_display();
+  delay(5000);
+  //   delay(500);
   // char temp_str[4];
   // sprintf(temp_str, "%2.1lf")
 
@@ -826,24 +835,24 @@ void loop()
   delay(1000);
   analogWrite(L9110_B_1A, LOW);
 
-  for (int led_addr = 0; led_addr < 4; led_addr++)
-  {
-    lc.clearDisplay(led_addr);
-    for (int row_idx = 0; row_idx < 8; row_idx++)
-    {
-      for (int col_idx = 0; col_idx < 8; col_idx++)
-      {
-        lc.setLed(led_addr, row_idx, col_idx, true);
-        // delay(100);
-        // delay(50);
-        // delay(10);
-        delay(10);
-      }
-      lc.clearDisplay(led_addr);
-    }
-    lc.clearDisplay(led_addr);
-  }
-  // delay(3000);
+  //   for (int led_addr = 0; led_addr < 4; led_addr++)
+  //   {
+  //     lc.clearDisplay(led_addr);
+  //     for (int row_idx = 0; row_idx < 8; row_idx++)
+  //     {
+  //       for (int col_idx = 0; col_idx < 8; col_idx++)
+  //       {
+  //         lc.setLed(led_addr, row_idx, col_idx, true);
+  //         // delay(100);
+  //         // delay(50);
+  //         // delay(10);
+  //         delay(10);
+  //       }
+  //       lc.clearDisplay(led_addr);
+  //     }
+  //     lc.clearDisplay(led_addr);
+  //   }
+  delay(1000);
   analogWrite(L9110_B_1A, 255);
-  delay(3000);
+  delay(1000);
 }
