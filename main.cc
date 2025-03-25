@@ -321,6 +321,18 @@ void DHT::readSensor()
   error = ERROR_NONE;
 }
 
+////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////
+
 #include <SPI.h>
 #include <SD.h>
 #include <Wire.h>
@@ -336,6 +348,9 @@ void DHT::readSensor()
 // SD:MOSI -> R3:12
 // SD:SCK -> R3:13
 // SD:CS -> R3:10
+
+#define SD_CARD_LOG_FILEPATH "IOT102.tsv"
+
 // LM35
 // #define LM35_PIN A0
 #define DHT11_PIN 4
@@ -478,13 +493,13 @@ B00111100,
 // 5
 {
 B00000000,
-B01111000,
-B11001100,
-B11000000,
-B11111000,
-B11001100,
-B11001100,
-B01111000,
+B00111100,
+B01100110,
+B01100000,
+B01111100,
+B01100110,
+B01100110,
+B00111100,
 },
 // 6
 {
@@ -634,8 +649,208 @@ void led_matrix_put_dot_for_temperature_display()
   lc.setLed(3, 6, 7, true);
 }
 
+void control_fan(double temp_c)
+{
+  if (FORCE_FAN_ON)
+  {
+    analogWrite(L9110_B_1A, 255);
+  }
+  else
+  {
+    if (temp_c >= TEMPERATURE_THRESHOLD)
+    {
+      analogWrite(L9110_B_1A, 255);
+    }
+    else
+    {
+      analogWrite(L9110_B_1A, 0);
+    }
+  }
+}
+
+void display_temperature_on_led_matrix(double temp_c)
+{
+  clear_all_led_display();
+  unsigned char digit_1, digit_2;
+  digit_1 = digit_2 = (unsigned char)(temp_c);
+  digit_1           = ((digit_1 % 100) / 10) % 10;
+  display_number(0, digit_1);
+  digit_2 = digit_2 % 10;
+  display_number(1, digit_2);
+  unsigned char first_decimal_digit = (unsigned char)((int)(temp_c * 10) % 10);
+  display_number(2, first_decimal_digit);
+  display_C_character(3);
+  led_matrix_put_dot_for_temperature_display();
+}
+
+void sd_card_test_read_ascii_art()
+{
+  // reading file from SD card
+  sd_file_obj = SD.open("test.txt");
+  if (sd_file_obj)
+  {
+    // Serial.println("test.txt:");
+    // read from the file until there's nothing else in it:
+    Serial.println(F("content of test.txt file from SD card"));
+    while (sd_file_obj.available())
+    {
+      Serial.write(sd_file_obj.read());
+    }
+
+    // close the file:
+    sd_file_obj.close();
+  }
+  else
+  {
+    // if the file didn't open, print an error
+    Serial.println(F("failed to open test.txt"));
+  }
+}
+
+void write_log_to_sd_card(double temp_c, uint32_t unix_ts)
+{
+  // write data to SD card
+  sd_file_obj = SD.open(SD_CARD_LOG_FILEPATH, FILE_WRITE);
+  if (sd_file_obj)
+  {
+    // sprintf(       //
+    //     log_line,  //
+    //     "%lu\t%.1f",  //
+    //     unix_ts,   //
+    //     temp_c     //
+    // );
+    char temp_str[10];
+    dtostrf(temp_c, 4, 1, temp_str);
+
+    char log_line[40];
+
+    sprintf(        //
+        log_line,   //
+        "%lu\t%s",  //
+        unix_ts,    //
+        temp_str    //
+    );
+
+    // sprintf(          //
+    //     log_line,     //
+    //     "%lu\t%.1f",  //
+    //     unix_ts,      //
+    //     temp_c        //
+    // );
+    Serial.println(F("log line"));
+    Serial.print(log_line);
+    Serial.println(F("|"));
+    sd_file_obj.println(log_line);
+    sd_file_obj.close();
+    Serial.println(F("log written to SD card"));
+  }
+}
+
 double TEMPERATURE_THRESHOLD = 31.5;
 bool FORCE_FAN_ON            = false;
+
+#define BT_CMD_CODE_SET_THRESHOLD 1
+#define BT_CMD_CODE_ENABLE_FAN    2
+#define BT_CMD_CODE_DISABLE_FAN   3
+#define BT_CMD_CODE_DOWNLOAD_DATA 4
+#define SD_CARD_READ_BUFFER_SIZE  16
+
+void handle_bluetooth_communication()
+{
+  int cmd_code = BTSerial.read();
+  if (cmd_code == BT_CMD_CODE_SET_THRESHOLD)
+  {
+    // TODO
+  }
+  else if (cmd_code == BT_CMD_CODE_ENABLE_FAN)
+  {
+    FORCE_FAN_ON = true;
+    BTSerial.write((unsigned char)0);
+  }
+  else if (cmd_code == BT_CMD_CODE_DISABLE_FAN)
+  {
+    FORCE_FAN_ON = false;
+    BTSerial.write((unsigned char)0);
+  }
+  else if (cmd_code == BT_CMD_CODE_DOWNLOAD_DATA)
+  {
+    if (!SD_OK)
+    {
+      BTSerial.write((unsigned char)1);
+    }
+    else
+    {
+      sd_file_obj = SD.open(SD_CARD_LOG_FILEPATH, FILE_READ);
+      if (sd_file_obj)
+      {
+        BTSerial.write((unsigned char)0);
+        uint32_t file_size = sd_file_obj.size();
+        BTSerial.write(file_size & 0xff);
+        BTSerial.write((file_size >> 8) & 0xff);
+        BTSerial.write((file_size >> 16) & 0xff);
+        BTSerial.write((file_size >> 24) & 0xff);
+
+        uint32_t bluetooth_total_sent_byte_count = 0;
+
+        char read_buffer[SD_CARD_READ_BUFFER_SIZE];
+        uint32_t total_read_count = 0;
+        // reading file data from SD card
+        while (1)
+        {
+          size_t read_count = sd_file_obj.readBytes(read_buffer, SD_CARD_READ_BUFFER_SIZE);
+          if (read_count < 1)
+          {
+            break;
+          }
+
+          total_read_count += read_count;
+
+          size_t total_sent_count  = 0;
+          size_t sent_count        = 0;
+          size_t remain_byte_count = read_count;
+
+          // sending data over serial interface
+          while (1)
+          {
+            Serial.print(F("BLUETOOTH_SENDING_DATA: "));
+            Serial.print(F("FILE_SIZE: "));
+            Serial.print(file_size);
+            Serial.print(F(" SENT_COUNT: "));
+            Serial.print(bluetooth_total_sent_byte_count);
+            Serial.print(F("\r"));
+
+            sent_count = BTSerial.write(read_buffer + total_sent_count, remain_byte_count);
+            if (sent_count < 1)
+            {
+              break;
+            }
+
+            total_sent_count += sent_count;
+            remain_byte_count -= sent_count;
+            bluetooth_total_sent_byte_count += sent_count;
+
+            if (remain_byte_count == 0)
+            {
+              break;
+            }
+          }
+
+          if (sent_count < 1)
+          {
+            break;
+          }
+        }
+
+        Serial.print(F("\n\nEND_BLUETOOTH_SENDING_DATA\n"));
+      }
+      else
+      {
+        Serial.println(F("failed to open file on SD card"));
+        BTSerial.write((unsigned char)1);
+      }
+    }
+  }
+}
 
 void setup()
 {
@@ -669,7 +884,7 @@ void setup()
     // SdVolume volume;
     // SdFile root;
     Serial.println(F("SD OK"));
-    sd_file_obj = SD.open("IOT102.tsv", FILE_WRITE);
+    sd_file_obj = SD.open(SD_CARD_LOG_FILEPATH, FILE_WRITE);
     if (sd_file_obj)
     {
       // sd_file_obj.println(log_line);
@@ -735,43 +950,11 @@ void loop()
   Serial.print(F("- DHT11: "));
   Serial.print(temp_c);
   Serial.println(F(" *C"));
-
-  if (FORCE_FAN_ON)
-  {
-    analogWrite(L9110_B_1A, 255);
-  }
-  else
-  {
-    if (temp_c >= TEMPERATURE_THRESHOLD)
-    {
-      analogWrite(L9110_B_1A, 255);
-    }
-    else
-    {
-      analogWrite(L9110_B_1A, 0);
-    }
-  }
-
-  clear_all_led_display();
-  unsigned char digit_1, digit_2;
-  digit_1 = digit_2 = (unsigned char)(temp_c);
-  digit_1           = ((digit_1 % 100) / 10) % 10;
-  display_number(0, digit_1);
-  digit_2 = digit_2 % 10;
-  display_number(1, digit_2);
-  unsigned char first_decimal_digit = (unsigned char)((int)(temp_c * 10) % 10);
-  display_number(2, first_decimal_digit);
-  display_C_character(3);
-  led_matrix_put_dot_for_temperature_display();
-  // delay(1000);
-  // delay(500);
-  // char temp_str[4];
-  // sprintf(temp_str, "%2.1lf")
-
-  // TODO threading?
+  control_fan(temp_c);
   // Display time on LED matrix
+  display_temperature_on_led_matrix(temp_c);
 
-  if (DS3231_OK && DS3231_OK)
+  if (DS3231_OK && SD_OK)
   {
     Serial.println(F("- DS3231"));
     dt_obj           = rtc_clock.now();
@@ -792,70 +975,13 @@ void loop()
     date_time_str[19] = '\0';
     Serial.println(date_time_str);
 
-    // write data to SD card
-    sd_file_obj = SD.open("IOT102.tsv", FILE_WRITE);
-    if (sd_file_obj)
-    {
-      // sprintf(       //
-      //     log_line,  //
-      //     "%lu\t%.1f",  //
-      //     unix_ts,   //
-      //     temp_c     //
-      // );
-      char temp_str[10];
-      dtostrf(temp_c, 4, 1, temp_str);
-
-      char log_line[40];
-
-      sprintf(        //
-          log_line,   //
-          "%lu\t%s",  //
-          unix_ts,    //
-          temp_str    //
-      );
-
-      // sprintf(          //
-      //     log_line,     //
-      //     "%lu\t%.1f",  //
-      //     unix_ts,      //
-      //     temp_c        //
-      // );
-      Serial.println(F("log line"));
-      Serial.print(log_line);
-      Serial.println(F("|"));
-      sd_file_obj.println(log_line);
-      sd_file_obj.close();
-      Serial.println(F("log written to SD card"));
-    }
-
-    // TODO
-    // reading file from SD card
-    sd_file_obj = SD.open("test.txt");
-    if (sd_file_obj)
-    {
-      // Serial.println("test.txt:");
-      // read from the file until there's nothing else in it:
-      Serial.println(F("content of test.txt file from SD card"));
-      while (sd_file_obj.available())
-      {
-        Serial.write(sd_file_obj.read());
-      }
-
-      // close the file:
-      sd_file_obj.close();
-    }
-    else
-    {
-      // if the file didn't open, print an error
-      Serial.println(F("failed to open test.txt"));
-    }
-  }
-  else
-  {
+    write_log_to_sd_card(temp_c, unix_ts);
+    sd_card_test_read_ascii_art();
   }
 
   if (BTSerial.available())
   {
+    handle_bluetooth_communication();
   }
 
   delay(500);
