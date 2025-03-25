@@ -1,88 +1,155 @@
 #include <SPI.h>
+#include <SD.h>
 #include <Wire.h>
 
-// MD_Parola@3.7.3
-// MD_MAX72XX@3.5.1
-#include <MD_Parola.h>
-#include <MD_MAX72xx.h>
-
+#include <LedControl.h>
 
 // AnalogRTCLib@1.1.0
 #include <RTClib.h>
 
-// define LED Matrix setup
-#define MAX7219_HARDWARE_TYPE MD_MAX72XX::FC16_HW
-#define MAX7219_MAX_DEVICES 4  // 8x32 = 4 modules (each 8x8)
+// SD card
+#define SD_CARD_CS_PIN 10
+#define LM35_PIN       A0
 
-#define MAX7219_CLK_PIN  8
-#define MAX7219_CS_PIN   7
-#define MAX7219_DATA_PIN 6
+// define LED Matrix setup
+
+#define MAX7219_MAX_DEVICES 4  // 8x32 = 4 modules (each 8x8)
+#define MAX7219_CLK_PIN     8
+#define MAX7219_CS_PIN      7
+#define MAX7219_DATA_PIN    6
 
 // MAX7219:CLK -> R3:8
 // MAX7219:CS -> R3:7
 // MAX7219:DIN -> R3:6
 // initialize LED matrix
-MD_Parola matrix = MD_Parola(
-    MAX7219_HARDWARE_TYPE,
-    MAX7219_DATA_PIN,
-    MAX7219_CLK_PIN,
-    MAX7219_CS_PIN,
-    MAX7219_MAX_DEVICES
-);
+LedControl lc = LedControl(MAX7219_DATA_PIN, MAX7219_CLK_PIN, MAX7219_CS_PIN, MAX7219_MAX_DEVICES);
 
 // DS3231:SCL -> R3:SCL
 // DS3231:SDA -> R3:SDA
-RTC_DS3231 rtc_clock;
+bool DS3231_OK = false;
+bool SD_OK     = false;
 
-// TODO sync datetime from phone
+// HC-05
+// HC-05:TX -> R3:2
+// HC-05:RX -> R3:3
+#include <SoftwareSerial.h>
+SoftwareSerial BTSerial (2,3);
 
-void setup() {
+double lm35_get_temperature()
+{
+  double v_out = analogRead(LM35_PIN) * (5.0 / 1023.0);
+  // double celsius_temperature_value = (v_out * 500.0) / 1023.0;
+  // double celsius_temperature_value = v_out * (500.0 / 1023.0);
+  double celsius_temperature_value = v_out * 100.0;
+  return celsius_temperature_value;
+}
+
+void setup()
+{
+  pinMode(LM35_PIN, INPUT);
   Serial.begin(9600);
+  while (!Serial)
+  {
+    // wait for serial port to connect. Needed for native USB port only
+  }
 
-  // initialize LED matrix
-  matrix.begin();
-  // matrix.setIntensity(2);  // Adjust brightness (0-15)
-  matrix.setIntensity(1);  // Adjust brightness (0-15)
-  matrix.displayClear();
+  // Initialize LED matrix
+
+  int device_count = lc.getDeviceCount();
+  for (int device_idx = 0; device_idx < device_count; device_idx++)
+  {
+    lc.shutdown(device_idx, false);  // Wake up display
+    lc.setIntensity(device_idx, 0);  // Set brightness (0-15)
+    lc.clearDisplay(device_idx);
+  }
+
+  if (SD.begin(SD_CARD_CS_PIN))
+  {
+    SD_OK = true;
+  }
+  else
+  {
+    Serial.println(F("init SD failed!"));
+    // Serial.println(F("SD"));
+    // while (1)
+    // {
+    // }
+  }
 
   // initialize RTC
-  if(!rtc_clock.begin()){
-    Serial.println("could not find RTC");
-    while(1);
+  if (rtc_clock.begin())
+  {
+    DS3231_OK = true;
+  }
+  else
+  {
+    Serial.println(F("could not find RTC"));
+    // Serial.println(F("RTC"));
+    while (1)
+    {
+    }
   }
 }
 
-void loop() {
-  DateTime now = rtc_clock.now();
-  char date_time_str[20];
-  sprintf(
-    date_time_str,
-    "%04d-%02d-%02d %02d:%02d:%02d",  // 4+1+2+1+2+1+2*3+2=19
-    now.year(),
-    now.month(),
-    now.dayOfTheWeek(),
-    now.hour(),
-    now.minute(),
-    now.second()
-  );
+RTC_DS3231 rtc_clock;
+DateTime dt_obj;
+// TODO sync datetime from phone
 
-  date_time_str[19] = '\0';
-  Serial.println(date_time_str);
+File sd_file_obj;
+
+void loop()
+{
+  if (DS3231_OK)
+  {
+    Serial.println(F("- DS3231"));
+    dt_obj = rtc_clock.now();
+
+    char date_time_str[20];
+    sprintf(                              //
+        date_time_str,                    //
+        "%04d-%02d-%02d %02d:%02d:%02d",  // 4+1+2+1+2+1+2*3+2=19
+        dt_obj.year(),                    //
+        dt_obj.month(),                   //
+        dt_obj.dayOfTheWeek(),            //
+        dt_obj.hour(),                    //
+        dt_obj.minute(),                  //
+        dt_obj.second()                   //
+    );
+
+    date_time_str[19] = '\0';
+    Serial.println(date_time_str);
+  }
+
+  double temp_c = lm35_get_temperature();
+  Serial.print(F("- LM35: "));
+  Serial.print(temp_c);
+  Serial.println(F(" *C"));
 
   // TODO threading?
   // Display time on LED matrix
-  matrix.displayClear();
-  matrix.displayText(date_time_str, PA_CENTER, 50, 1000, PA_SCROLL_LEFT);
-  while (!matrix.displayAnimate());  // Wait for scrolling to finish
 
-  // delay(1000);
-  delay(100);
-  // char pad_str[3] = {
-  //   ' ',
-  //   ' ',
-  //   '\0'
-  // };
+  if (SD_OK)
+  {
+    // reading file from SD card
+    sd_file_obj = SD.open("test.txt");
+    if (sd_file_obj)
+    {
+      // Serial.println("test.txt:");
+      // read from the file until there's nothing else in it:
+      while (sd_file_obj.available())
+      {
+        Serial.write(sd_file_obj.read());
+      }
 
-  // matrix.displayText(pad_str, PA_CENTER, 50, 1000, PA_SCROLL_LEFT);
-  // while (!matrix.displayAnimate());  // Wait for scrolling to finish
+      // close the file:
+      sd_file_obj.close();
+    }
+    else
+    {
+      // if the file didn't open, print an error
+      Serial.println(F("failed to open test.txt"));
+    }
+  }
+
+  delay(1000);
 }

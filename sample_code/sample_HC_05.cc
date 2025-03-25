@@ -45,7 +45,7 @@ void
 //   rect(50, 100, 150, 50, 10);  // Turn ON Button
 //   rect(250, 100, 150, 50, 10); // Turn OFF Button
 //   fill(255);
-  
+
 //   textSize(32);
 //   text("Turn ON",60, 135);
 //   text("Turn OFF", 255, 135);
@@ -57,7 +57,7 @@ void
 //   text("Program made by Dejan Nedelkovski,\n     www.HowToMechatronics.com", 80, 320);
 
 //   text(ledStatus, 155, 240); // Prints the string comming from the Arduino
-  
+
 //   // If the button "Turn ON" is pressed
 //   if(mousePressed && mouseX>50 && mouseX<200 && mouseY>100 && mouseY<150){
 //     myPort.write('1'); // Sends the character '1' and that will turn on the LED

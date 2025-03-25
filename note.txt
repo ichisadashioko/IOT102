@@ -1,3 +1,8 @@
 https://lastminuteengineers.com/l298n-dc-stepper-driver-arduino-tutorial/
 https://lastminuteengineers.com/arduino-micro-sd-card-module-tutorial/
 https://docs.arduino.cc/learn/programming/sd-guide/
+
+C:/Users/ahri/AppData/Local/Arduino15/packages/arduino/hardware/avr/1.8.6
+C:/Users/ahri/AppData/Local/Arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/bin
+C:/Users/ahri/AppData/Local/Arduino15/packages/arduino/hardware/avr/1.8.6/cores/arduino
+C:/Users/ahri/AppData/Local/Arduino15/packages/arduino/hardware/avr/1.8.6/variants/mega
