@@ -560,8 +560,15 @@ void display_number(int led_addr, unsigned char input_number)
   lc.clearDisplay(led_addr);
   for (unsigned char row_idx = 0; row_idx < 8; row_idx++)
   {
-    lc.setRow(led_addr, row_idx, _LED_8x8_DIGITS[input_number][row_idx]);
+    // lc.setRow(led_addr, row_idx, _LED_8x8_DIGITS[input_number][row_idx]);
+    lc.setRow(led_addr, 7-row_idx, _LED_8x8_DIGITS[input_number][row_idx]);
+    // lc.setColumn(led_addr, 7-row_idx, _LED_8x8_DIGITS[input_number][row_idx]);
+    // lc.setColumn(led_addr, row_idx, _LED_8x8_DIGITS[input_number][row_idx]);
     // lc.setRow(led_addr, 8-row_idx, _LED_8x8_DIGITS[input_number][row_idx]);
+    for(unsigned char col_idx = 0; col_idx < 8; col_idx++){
+        bool led_state = (_LED_8x8_DIGITS[input_number][row_idx] >> col_idx & 1);
+        lc.setLed(led_addr, 7-row_idx, col_idx, led_state);
+    }
   }
 }
 
@@ -698,9 +705,13 @@ void setup()
   // TODO test code
   // display_C_character(0);
   // display_colon(1);
-  // while (1)
-  // {
-  // }
+  display_number(0, 1);
+  display_number(1, 2);
+  display_number(2, 3);
+  display_number(3, 4);
+  while (1)
+  {
+  }
 }
 
 void loop()
