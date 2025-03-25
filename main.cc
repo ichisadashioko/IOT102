@@ -450,6 +450,42 @@ void setup()
   }
 }
 
+const uint8_t _LED_8x8_DIGITS[10][8] = {
+    {0x3C, 0x66, 0x6E, 0x76, 0x66, 0x66, 0x3C, 0x00}, // 0
+    {0x18, 0x38, 0x18, 0x18, 0x18, 0x18, 0x7E, 0x00}, // 1
+    {0x3C, 0x66, 0x06, 0x1C, 0x30, 0x60, 0x7E, 0x00}, // 2
+    {0x3C, 0x66, 0x06, 0x1C, 0x06, 0x66, 0x3C, 0x00}, // 3
+    {0x0C, 0x1C, 0x2C, 0x4C, 0x7E, 0x0C, 0x0C, 0x00}, // 4
+    {0x7E, 0x60, 0x7C, 0x06, 0x06, 0x66, 0x3C, 0x00}, // 5
+    {0x3C, 0x66, 0x60, 0x7C, 0x66, 0x66, 0x3C, 0x00}, // 6
+    {0x7E, 0x06, 0x0C, 0x18, 0x30, 0x30, 0x30, 0x00}, // 7
+    {0x3C, 0x66, 0x66, 0x3C, 0x66, 0x66, 0x3C, 0x00}, // 8
+    {0x3C, 0x66, 0x66, 0x3E, 0x06, 0x66, 0x3C, 0x00}  // 9
+};
+
+void display_number(int led_addr, unsigned char input_number){
+    if(led_addr < 0){return;}
+    if(led_addr >= MAX7219_MAX_DEVICES){return;}
+    if(input_number > 9){return;}
+    lc.clearDisplay(led_addr);
+    for(unsigned char row_idx = 0; row_idx < 8; row_idx++){
+        lc.setRow(led_addr, row_idx, _LED_8x8_DIGITS[input_number][row_idx]);
+        // lc.setRow(led_addr, 8-row_idx, _LED_8x8_DIGITS[input_number][row_idx]);
+    }
+}
+
+void display_char(int led_idx, char input_char){
+    if(led_idx < 0){return;}
+    if(led_idx >= MAX7219_MAX_DEVICES){return;}
+    lc.clearDisplay(led_idx);
+}
+
+void clear_all_led_display(){
+    for(unsigned char led_addr = 0; led_addr < MAX7219_MAX_DEVICES; led_addr++){
+        lc.clearDisplay(led_addr);
+    }
+}
+
 void loop()
 {
   if (DS3231_OK){
@@ -477,6 +513,20 @@ void loop()
   Serial.print(F("- DHT11: "));
   Serial.print(temp_c);
   Serial.println(F(" *C"));
+
+  clear_all_led_display();
+  unsigned char digit_1,digit_2;
+  digit_1 = digit_2 = (unsigned char)(temp_c);
+  digit_1 = ((digit_1 % 100) / 10) % 10;
+  display_number(0, digit_1);
+  digit_2 = digit_2%10;
+  display_number(1, digit_2);
+  unsigned char first_presision_digit = (unsigned char)(temp_c * 10.0);
+  first_presision_digit = first_presision_digit % 10;
+  display_number(3, first_presision_digit);
+  delay(5000);
+//   char temp_str[4];
+//   sprintf(temp_str, "%2.1lf")
 
   // TODO threading?
   // Display time on LED matrix
