@@ -26,299 +26,299 @@
    2013-07-01: Add a resetTimer method
  ******************************************************************/
 
- #ifndef dht_h
- #define dht_h
+#ifndef dht_h
+#define dht_h
 
- #if ARDUINO < 100
- #include <WProgram.h>
- #else
- #include <Arduino.h>
- #endif
+#if ARDUINO < 100
+#include <WProgram.h>
+#else
+#include <Arduino.h>
+#endif
 
- class DHT
- {
-  public:
-   typedef enum
-   {
-     AUTO_DETECT,
-     DHT11,
-     DHT22,
-     AM2302,  // Packaged DHT22
-     RHT03    // Equivalent to DHT22
-   } DHT_MODEL_t;
+class DHT
+{
+ public:
+  typedef enum
+  {
+    AUTO_DETECT,
+    DHT11,
+    DHT22,
+    AM2302,  // Packaged DHT22
+    RHT03    // Equivalent to DHT22
+  } DHT_MODEL_t;
 
-   typedef enum
-   {
-     ERROR_NONE = 0,
-     ERROR_TIMEOUT,
-     ERROR_CHECKSUM
-   } DHT_ERROR_t;
+  typedef enum
+  {
+    ERROR_NONE = 0,
+    ERROR_TIMEOUT,
+    ERROR_CHECKSUM
+  } DHT_ERROR_t;
 
-   void setup(uint8_t pin, DHT_MODEL_t model = AUTO_DETECT);
-   void resetTimer();
+  void setup(uint8_t pin, DHT_MODEL_t model = AUTO_DETECT);
+  void resetTimer();
 
-   float getTemperature();
-   float getHumidity();
+  float getTemperature();
+  float getHumidity();
 
-   DHT_ERROR_t getStatus() { return error; };
-   const char* getStatusString();
+  DHT_ERROR_t getStatus() { return error; };
+  const char* getStatusString();
 
-   DHT_MODEL_t getModel() { return model; }
+  DHT_MODEL_t getModel() { return model; }
 
-   int getMinimumSamplingPeriod() { return model == DHT11 ? 1000 : 2000; }
+  int getMinimumSamplingPeriod() { return model == DHT11 ? 1000 : 2000; }
 
-   int8_t getNumberOfDecimalsTemperature() { return model == DHT11 ? 0 : 1; };
-   int8_t getLowerBoundTemperature() { return model == DHT11 ? 0 : -40; };
-   int8_t getUpperBoundTemperature() { return model == DHT11 ? 50 : 125; };
+  int8_t getNumberOfDecimalsTemperature() { return model == DHT11 ? 0 : 1; };
+  int8_t getLowerBoundTemperature() { return model == DHT11 ? 0 : -40; };
+  int8_t getUpperBoundTemperature() { return model == DHT11 ? 50 : 125; };
 
-   int8_t getNumberOfDecimalsHumidity() { return 0; };
-   int8_t getLowerBoundHumidity() { return model == DHT11 ? 20 : 0; };
-   int8_t getUpperBoundHumidity() { return model == DHT11 ? 90 : 100; };
+  int8_t getNumberOfDecimalsHumidity() { return 0; };
+  int8_t getLowerBoundHumidity() { return model == DHT11 ? 20 : 0; };
+  int8_t getUpperBoundHumidity() { return model == DHT11 ? 90 : 100; };
 
-   static float toFahrenheit(float fromCelcius) { return 1.8 * fromCelcius + 32.0; };
-   static float toCelsius(float fromFahrenheit) { return (fromFahrenheit - 32.0) / 1.8; };
+  static float toFahrenheit(float fromCelcius) { return 1.8 * fromCelcius + 32.0; };
+  static float toCelsius(float fromFahrenheit) { return (fromFahrenheit - 32.0) / 1.8; };
 
-  protected:
-   void readSensor();
+ protected:
+  void readSensor();
 
-   float temperature;
-   float humidity;
+  float temperature;
+  float humidity;
 
-   uint8_t pin;
+  uint8_t pin;
 
-  private:
-   DHT_MODEL_t model;
-   DHT_ERROR_t error;
-   unsigned long lastReadTime;
- };
+ private:
+  DHT_MODEL_t model;
+  DHT_ERROR_t error;
+  unsigned long lastReadTime;
+};
 
- #endif /*dht_h*/
+#endif /*dht_h*/
 
- /******************************************************************
-   DHT Temperature & Humidity Sensor library for Arduino.
+/******************************************************************
+  DHT Temperature & Humidity Sensor library for Arduino.
 
-   Features:
-   - Support for DHT11 and DHT22/AM2302/RHT03
-   - Auto detect sensor model
-   - Very low memory footprint
-   - Very small code
+  Features:
+  - Support for DHT11 and DHT22/AM2302/RHT03
+  - Auto detect sensor model
+  - Very low memory footprint
+  - Very small code
 
-   http://www.github.com/markruys/arduino-DHT
+  http://www.github.com/markruys/arduino-DHT
 
-   Written by Mark Ruys, mark@paracas.nl.
+  Written by Mark Ruys, mark@paracas.nl.
 
-   BSD license, check license.txt for more information.
-   All text above must be included in any redistribution.
+  BSD license, check license.txt for more information.
+  All text above must be included in any redistribution.
 
-   Datasheets:
-   - http://www.micro4you.com/files/sensor/DHT11.pdf
-   - http://www.adafruit.com/datasheets/DHT22.pdf
-   - http://dlnmh9ip6v2uc.cloudfront.net/datasheets/Sensors/Weather/RHT03.pdf
-   - http://meteobox.tk/files/AM2302.pdf
+  Datasheets:
+  - http://www.micro4you.com/files/sensor/DHT11.pdf
+  - http://www.adafruit.com/datasheets/DHT22.pdf
+  - http://dlnmh9ip6v2uc.cloudfront.net/datasheets/Sensors/Weather/RHT03.pdf
+  - http://meteobox.tk/files/AM2302.pdf
 
-   Changelog:
-    2013-06-10: Initial version
-    2013-06-12: Refactored code
-    2013-07-01: Add a resetTimer method
-  ******************************************************************/
+  Changelog:
+   2013-06-10: Initial version
+   2013-06-12: Refactored code
+   2013-07-01: Add a resetTimer method
+ ******************************************************************/
 
- //  #include "DHT.h"
+//  #include "DHT.h"
 
- void DHT::setup(uint8_t pin, DHT_MODEL_t model)
- {
-   DHT::pin   = pin;
-   DHT::model = model;
-   DHT::resetTimer();  // Make sure we do read the sensor in the next readSensor()
+void DHT::setup(uint8_t pin, DHT_MODEL_t model)
+{
+  DHT::pin   = pin;
+  DHT::model = model;
+  DHT::resetTimer();  // Make sure we do read the sensor in the next readSensor()
 
-   if (model == AUTO_DETECT)
-   {
-     DHT::model = DHT22;
-     readSensor();
-     if (error == ERROR_TIMEOUT)
-     {
-       DHT::model = DHT11;
-       // Warning: in case we auto detect a DHT11, you should wait at least 1000 msec
-       // before your first read request. Otherwise you will get a time out error.
-     }
-   }
- }
+  if (model == AUTO_DETECT)
+  {
+    DHT::model = DHT22;
+    readSensor();
+    if (error == ERROR_TIMEOUT)
+    {
+      DHT::model = DHT11;
+      // Warning: in case we auto detect a DHT11, you should wait at least 1000 msec
+      // before your first read request. Otherwise you will get a time out error.
+    }
+  }
+}
 
- void DHT::resetTimer()
- {
-   DHT::lastReadTime = millis() - 3000;
- }
+void DHT::resetTimer()
+{
+  DHT::lastReadTime = millis() - 3000;
+}
 
- float DHT::getHumidity()
- {
-   readSensor();
-   return humidity;
- }
+float DHT::getHumidity()
+{
+  readSensor();
+  return humidity;
+}
 
- float DHT::getTemperature()
- {
-   readSensor();
-   return temperature;
- }
+float DHT::getTemperature()
+{
+  readSensor();
+  return temperature;
+}
 
- #ifndef OPTIMIZE_SRAM_SIZE
+#ifndef OPTIMIZE_SRAM_SIZE
 
- const char* DHT::getStatusString()
- {
-   switch (error)
-   {
-     case DHT::ERROR_TIMEOUT:
-       return "TIMEOUT";
+const char* DHT::getStatusString()
+{
+  switch (error)
+  {
+    case DHT::ERROR_TIMEOUT:
+      return "TIMEOUT";
 
-     case DHT::ERROR_CHECKSUM:
-       return "CHECKSUM";
+    case DHT::ERROR_CHECKSUM:
+      return "CHECKSUM";
 
-     default:
-       return "OK";
-   }
- }
+    default:
+      return "OK";
+  }
+}
 
- #else
+#else
 
- // At the expense of 26 bytes of extra PROGMEM, we save 11 bytes of
- // SRAM by using the following method:
+// At the expense of 26 bytes of extra PROGMEM, we save 11 bytes of
+// SRAM by using the following method:
 
- prog_char P_OK[] PROGMEM       = "OK";
- prog_char P_TIMEOUT[] PROGMEM  = "TIMEOUT";
- prog_char P_CHECKSUM[] PROGMEM = "CHECKSUM";
+prog_char P_OK[] PROGMEM       = "OK";
+prog_char P_TIMEOUT[] PROGMEM  = "TIMEOUT";
+prog_char P_CHECKSUM[] PROGMEM = "CHECKSUM";
 
- const char* DHT::getStatusString()
- {
-   prog_char* c;
-   switch (error)
-   {
-     case DHT::ERROR_CHECKSUM:
-       c = P_CHECKSUM;
-       break;
+const char* DHT::getStatusString()
+{
+  prog_char* c;
+  switch (error)
+  {
+    case DHT::ERROR_CHECKSUM:
+      c = P_CHECKSUM;
+      break;
 
-     case DHT::ERROR_TIMEOUT:
-       c = P_TIMEOUT;
-       break;
+    case DHT::ERROR_TIMEOUT:
+      c = P_TIMEOUT;
+      break;
 
-     default:
-       c = P_OK;
-       break;
-   }
+    default:
+      c = P_OK;
+      break;
+  }
 
-   static char buffer[9];
-   strcpy_P(buffer, c);
+  static char buffer[9];
+  strcpy_P(buffer, c);
 
-   return buffer;
- }
+  return buffer;
+}
 
- #endif
+#endif
 
- void DHT::readSensor()
- {
-   // Make sure we don't poll the sensor too often
-   // - Max sample rate DHT11 is 1 Hz   (duty cicle 1000 ms)
-   // - Max sample rate DHT22 is 0.5 Hz (duty cicle 2000 ms)
-   unsigned long startTime = millis();
-   if ((unsigned long)(startTime - lastReadTime) < (model == DHT11 ? 999L : 1999L))
-   {
-     return;
-   }
-   lastReadTime = startTime;
+void DHT::readSensor()
+{
+  // Make sure we don't poll the sensor too often
+  // - Max sample rate DHT11 is 1 Hz   (duty cicle 1000 ms)
+  // - Max sample rate DHT22 is 0.5 Hz (duty cicle 2000 ms)
+  unsigned long startTime = millis();
+  if ((unsigned long)(startTime - lastReadTime) < (model == DHT11 ? 999L : 1999L))
+  {
+    return;
+  }
+  lastReadTime = startTime;
 
-   temperature = NAN;
-   humidity    = NAN;
+  temperature = NAN;
+  humidity    = NAN;
 
-   // Request sample
+  // Request sample
 
-   digitalWrite(pin, LOW);  // Send start signal
-   pinMode(pin, OUTPUT);
-   if (model == DHT11)
-   {
-     delay(18);
-   }
-   else
-   {
-     // This will fail for a DHT11 - that's how we can detect such a device
-     delayMicroseconds(800);
-   }
+  digitalWrite(pin, LOW);  // Send start signal
+  pinMode(pin, OUTPUT);
+  if (model == DHT11)
+  {
+    delay(18);
+  }
+  else
+  {
+    // This will fail for a DHT11 - that's how we can detect such a device
+    delayMicroseconds(800);
+  }
 
-   pinMode(pin, INPUT);
-   digitalWrite(pin, HIGH);  // Switch bus to receive data
+  pinMode(pin, INPUT);
+  digitalWrite(pin, HIGH);  // Switch bus to receive data
 
-   // We're going to read 83 edges:
-   // - First a FALLING, RISING, and FALLING edge for the start bit
-   // - Then 40 bits: RISING and then a FALLING edge per bit
-   // To keep our code simple, we accept any HIGH or LOW reading if it's max 85 usecs long
+  // We're going to read 83 edges:
+  // - First a FALLING, RISING, and FALLING edge for the start bit
+  // - Then 40 bits: RISING and then a FALLING edge per bit
+  // To keep our code simple, we accept any HIGH or LOW reading if it's max 85 usecs long
 
-   uint16_t rawHumidity    = 0;
-   uint16_t rawTemperature = 0;
-   uint16_t data           = 0;
+  uint16_t rawHumidity    = 0;
+  uint16_t rawTemperature = 0;
+  uint16_t data           = 0;
 
-   for (int8_t i = -3; i < 2 * 40; i++)
-   {
-     byte age;
-     startTime = micros();
+  for (int8_t i = -3; i < 2 * 40; i++)
+  {
+    byte age;
+    startTime = micros();
 
-     do
-     {
-       age = (unsigned long)(micros() - startTime);
-       if (age > 90)
-       {
-         error = ERROR_TIMEOUT;
-         return;
-       }
-     } while (digitalRead(pin) == (i & 1) ? HIGH : LOW);
+    do
+    {
+      age = (unsigned long)(micros() - startTime);
+      if (age > 90)
+      {
+        error = ERROR_TIMEOUT;
+        return;
+      }
+    } while (digitalRead(pin) == (i & 1) ? HIGH : LOW);
 
-     if (i >= 0 && (i & 1))
-     {
-       // Now we are being fed our 40 bits
-       data <<= 1;
+    if (i >= 0 && (i & 1))
+    {
+      // Now we are being fed our 40 bits
+      data <<= 1;
 
-       // A zero max 30 usecs, a one at least 68 usecs.
-       if (age > 30)
-       {
-         data |= 1;  // we got a one
-       }
-     }
+      // A zero max 30 usecs, a one at least 68 usecs.
+      if (age > 30)
+      {
+        data |= 1;  // we got a one
+      }
+    }
 
-     switch (i)
-     {
-       case 31:
-         rawHumidity = data;
-         break;
-       case 63:
-         rawTemperature = data;
-         data           = 0;
-         break;
-     }
-   }
+    switch (i)
+    {
+      case 31:
+        rawHumidity = data;
+        break;
+      case 63:
+        rawTemperature = data;
+        data           = 0;
+        break;
+    }
+  }
 
-   // Verify checksum
+  // Verify checksum
 
-   if ((byte)(((byte)rawHumidity) + (rawHumidity >> 8) + ((byte)rawTemperature) + (rawTemperature >> 8)) != data)
-   {
-     error = ERROR_CHECKSUM;
-     return;
-   }
+  if ((byte)(((byte)rawHumidity) + (rawHumidity >> 8) + ((byte)rawTemperature) + (rawTemperature >> 8)) != data)
+  {
+    error = ERROR_CHECKSUM;
+    return;
+  }
 
-   // Store readings
+  // Store readings
 
-   if (model == DHT11)
-   {
-     humidity    = rawHumidity >> 8;
-     temperature = rawTemperature >> 8;
-   }
-   else
-   {
-     humidity = rawHumidity * 0.1;
+  if (model == DHT11)
+  {
+    humidity    = rawHumidity >> 8;
+    temperature = rawTemperature >> 8;
+  }
+  else
+  {
+    humidity = rawHumidity * 0.1;
 
-     if (rawTemperature & 0x8000)
-     {
-       rawTemperature = -(int16_t)(rawTemperature & 0x7FFF);
-     }
-     temperature = ((int16_t)rawTemperature) * 0.1;
-   }
+    if (rawTemperature & 0x8000)
+    {
+      rawTemperature = -(int16_t)(rawTemperature & 0x7FFF);
+    }
+    temperature = ((int16_t)rawTemperature) * 0.1;
+  }
 
-   error = ERROR_NONE;
+  error = ERROR_NONE;
 }
 
 #include <SPI.h>
@@ -386,18 +386,19 @@ SoftwareSerial BTSerial(HC05_TX, HC05_RX);
 // |=============================================|
 #define L9110_B_1A 5
 
-double dht11_get_temperature(){
+double dht11_get_temperature()
+{
   delay(dht.getMinimumSamplingPeriod());
   double temperature = dht.getTemperature();
   return temperature;
 }
 // double lm35_get_temperature()
 // {
-//   double v_out = analogRead(LM35_PIN) * (5.0 / 1023.0);
-//   // double celsius_temperature_value = (v_out * 500.0) / 1023.0;
-//   // double celsius_temperature_value = v_out * (500.0 / 1023.0);
-//   double celsius_temperature_value = v_out * 100.0;
-//   return celsius_temperature_value;
+// double v_out = analogRead(LM35_PIN) * (5.0 / 1023.0);
+// // double celsius_temperature_value = (v_out * 500.0) / 1023.0;
+// // double celsius_temperature_value = v_out * (500.0 / 1023.0);
+// double celsius_temperature_value = v_out * 100.0;
+// return celsius_temperature_value;
 // }
 
 RTC_DS3231 rtc_clock;
@@ -406,6 +407,99 @@ DateTime dt_obj;
 
 File sd_file_obj;
 
+const uint8_t _LED_8x8_DIGITS[10][8] = {
+    {0x3C, 0x66, 0x6E, 0x76, 0x66, 0x66, 0x3C, 0x00},  // 0
+    {0x18, 0x38, 0x18, 0x18, 0x18, 0x18, 0x7E, 0x00},  // 1
+    {0x3C, 0x66, 0x06, 0x1C, 0x30, 0x60, 0x7E, 0x00},  // 2
+    {0x3C, 0x66, 0x06, 0x1C, 0x06, 0x66, 0x3C, 0x00},  // 3
+    {0x0C, 0x1C, 0x2C, 0x4C, 0x7E, 0x0C, 0x0C, 0x00},  // 4
+    {0x7E, 0x60, 0x7C, 0x06, 0x06, 0x66, 0x3C, 0x00},  // 5
+    {0x3C, 0x66, 0x60, 0x7C, 0x66, 0x66, 0x3C, 0x00},  // 6
+    {0x7E, 0x06, 0x0C, 0x18, 0x30, 0x30, 0x30, 0x00},  // 7
+    {0x3C, 0x66, 0x66, 0x3C, 0x66, 0x66, 0x3C, 0x00},  // 8
+    {0x3C, 0x66, 0x66, 0x3E, 0x06, 0x66, 0x3C, 0x00}   // 9
+};
+
+void display_number(int led_addr, unsigned char input_number)
+{
+  if (led_addr < 0)
+  {
+    return;
+  }
+  if (led_addr >= MAX7219_MAX_DEVICES)
+  {
+    return;
+  }
+  if (input_number > 9)
+  {
+    return;
+  }
+  lc.clearDisplay(led_addr);
+  for (unsigned char row_idx = 0; row_idx < 8; row_idx++)
+  {
+    lc.setRow(led_addr, row_idx, _LED_8x8_DIGITS[input_number][row_idx]);
+    // lc.setRow(led_addr, 8-row_idx, _LED_8x8_DIGITS[input_number][row_idx]);
+  }
+}
+
+void display_char(int led_idx, char input_char)
+{
+  if (led_idx < 0)
+  {
+    return;
+  }
+  if (led_idx >= MAX7219_MAX_DEVICES)
+  {
+    return;
+  }
+  lc.clearDisplay(led_idx);
+}
+
+void clear_all_led_display()
+{
+  for (unsigned char led_addr = 0; led_addr < MAX7219_MAX_DEVICES; led_addr++)
+  {
+    lc.clearDisplay(led_addr);
+  }
+}
+
+// {0x00, 0x18, 0x18, 0x00, 0x00, 0x18, 0x18, 0x00} // :
+// {0x3C, 0x66, 0x60, 0x60, 0x60, 0x66, 0x3C, 0x00}  // C
+const unsigned char _8x8_COLON[8] = {0x00, 0x18, 0x18, 0x00, 0x00, 0x18, 0x18, 0x00};  // :
+void display_colon(int led_addr)
+{
+  if (led_addr < 0)
+  {
+    return;
+  }
+  if (led_addr >= MAX7219_MAX_DEVICES)
+  {
+    return;
+  }
+  lc.clearDisplay(led_addr);
+  for (unsigned char row_idx = 0; row_idx < 8; row_idx++)
+  {
+    lc.setRow(led_addr, row_idx, _8x8_COLON[row_idx]);
+  }
+}
+
+const unsigned char _8x8_CHAR_C[8] = {0x3C, 0x66, 0x60, 0x60, 0x60, 0x66, 0x3C, 0x00};
+void display_C_character(int led_addr)
+{
+  if (led_addr < 0)
+  {
+    return;
+  }
+  if (led_addr >= MAX7219_MAX_DEVICES)
+  {
+    return;
+  }
+  lc.clearDisplay(led_addr);
+  for (unsigned char row_idx = 0; row_idx < 8; row_idx++)
+  {
+    lc.setRow(led_addr, row_idx, _8x8_CHAR_C[row_idx]);
+  }
+}
 void setup()
 {
   Serial.begin(9600);
@@ -428,69 +522,97 @@ void setup()
     lc.clearDisplay(device_idx);
   }
 
-  if (SD.begin(SD_CARD_CS_PIN)) {
+  if (SD.begin(SD_CARD_CS_PIN))
+  {
     SD_OK = true;
     // Sd2Card card;
     // SdVolume volume;
     // SdFile root;
     Serial.println(F("SD OK"));
+    sd_file_obj = SD.open("IOT102.tsv", FILE_WRITE);
+    if (sd_file_obj)
+    {
+      // sd_file_obj.println(log_line);
+      sd_file_obj.write('\n');
+      sd_file_obj.close();
+      Serial.println(F("newline written to SD card"));
+    }
+    else
+    {
+      Serial.println(F("failed to open log file for initialize new session"));
+    }
   }
-  else {
+  else
+  {
     Serial.println(F("init SD failed!"));
     // Serial.println(F("SD"));
     // while (1) {}
   }
 
   // initialize RTC
-  if (rtc_clock.begin()) { DS3231_OK = true; }
-  else {
+  if (rtc_clock.begin())
+  {
+    DS3231_OK = true;
+
+    if (rtc_clock.lostPower())
+    {
+      Serial.println("RTC lost power, let's set the time!");
+      // When time needs to be set on a new device, or after a power loss, the
+      // following line sets the RTC to the date & time this sketch was compiled
+      rtc_clock.adjust(DateTime(F(__DATE__), F(__TIME__)));
+      // This line sets the RTC with an explicit date & time, for example to set
+      // January 21, 2014 at 3am you would call:
+      // rtc.adjust(DateTime(2014, 1, 21, 3, 0, 0));
+    }
+  }
+  else
+  {
     Serial.println(F("could not find RTC"));
     // Serial.println(F("RTC"));
-    while (1) {}
+    while (1)
+    {
+    }
   }
-}
 
-const uint8_t _LED_8x8_DIGITS[10][8] = {
-    {0x3C, 0x66, 0x6E, 0x76, 0x66, 0x66, 0x3C, 0x00}, // 0
-    {0x18, 0x38, 0x18, 0x18, 0x18, 0x18, 0x7E, 0x00}, // 1
-    {0x3C, 0x66, 0x06, 0x1C, 0x30, 0x60, 0x7E, 0x00}, // 2
-    {0x3C, 0x66, 0x06, 0x1C, 0x06, 0x66, 0x3C, 0x00}, // 3
-    {0x0C, 0x1C, 0x2C, 0x4C, 0x7E, 0x0C, 0x0C, 0x00}, // 4
-    {0x7E, 0x60, 0x7C, 0x06, 0x06, 0x66, 0x3C, 0x00}, // 5
-    {0x3C, 0x66, 0x60, 0x7C, 0x66, 0x66, 0x3C, 0x00}, // 6
-    {0x7E, 0x06, 0x0C, 0x18, 0x30, 0x30, 0x30, 0x00}, // 7
-    {0x3C, 0x66, 0x66, 0x3C, 0x66, 0x66, 0x3C, 0x00}, // 8
-    {0x3C, 0x66, 0x66, 0x3E, 0x06, 0x66, 0x3C, 0x00}  // 9
-};
-
-void display_number(int led_addr, unsigned char input_number){
-    if(led_addr < 0){return;}
-    if(led_addr >= MAX7219_MAX_DEVICES){return;}
-    if(input_number > 9){return;}
-    lc.clearDisplay(led_addr);
-    for(unsigned char row_idx = 0; row_idx < 8; row_idx++){
-        lc.setRow(led_addr, row_idx, _LED_8x8_DIGITS[input_number][row_idx]);
-        // lc.setRow(led_addr, 8-row_idx, _LED_8x8_DIGITS[input_number][row_idx]);
-    }
-}
-
-void display_char(int led_idx, char input_char){
-    if(led_idx < 0){return;}
-    if(led_idx >= MAX7219_MAX_DEVICES){return;}
-    lc.clearDisplay(led_idx);
-}
-
-void clear_all_led_display(){
-    for(unsigned char led_addr = 0; led_addr < MAX7219_MAX_DEVICES; led_addr++){
-        lc.clearDisplay(led_addr);
-    }
+  // TODO test code
+  // display_C_character(0);
+  // display_colon(1);
+  // while (1)
+  // {
+  // }
 }
 
 void loop()
 {
-  if (DS3231_OK){
+  // double temp_c = lm35_get_temperature();
+  double temp_c = dht11_get_temperature();
+  Serial.print(F("- DHT11: "));
+  Serial.print(temp_c);
+  Serial.println(F(" *C"));
+
+  clear_all_led_display();
+  unsigned char digit_1, digit_2;
+  digit_1 = digit_2 = (unsigned char)(temp_c);
+  digit_1           = ((digit_1 % 100) / 10) % 10;
+  display_number(0, digit_1);
+  digit_2 = digit_2 % 10;
+  display_number(1, digit_2);
+  unsigned char first_presision_digit = (unsigned char)(temp_c * 10.0);
+  first_presision_digit               = first_presision_digit % 10;
+  display_number(3, first_presision_digit);
+  // delay(5000);
+  delay(500);
+  // char temp_str[4];
+  // sprintf(temp_str, "%2.1lf")
+
+  // TODO threading?
+  // Display time on LED matrix
+
+  if (DS3231_OK && DS3231_OK)
+  {
     Serial.println(F("- DS3231"));
-    dt_obj = rtc_clock.now();
+    dt_obj           = rtc_clock.now();
+    uint32_t unix_ts = dt_obj.unixtime();
 
     char date_time_str[20];
     sprintf(                              //
@@ -506,57 +628,79 @@ void loop()
 
     date_time_str[19] = '\0';
     Serial.println(date_time_str);
-  }
 
-  // double temp_c = lm35_get_temperature();
-  double temp_c = dht11_get_temperature();
-  Serial.print(F("- DHT11: "));
-  Serial.print(temp_c);
-  Serial.println(F(" *C"));
+    // write data to SD card
+    sd_file_obj = SD.open("IOT102.tsv", FILE_WRITE);
+    if (sd_file_obj)
+    {
+      // sprintf(       //
+      //     log_line,  //
+      //     "%lu\t%.1f",  //
+      //     unix_ts,   //
+      //     temp_c     //
+      // );
+      char temp_str[10];
+      dtostrf(temp_c, 4, 1, temp_str);
 
-  clear_all_led_display();
-  unsigned char digit_1,digit_2;
-  digit_1 = digit_2 = (unsigned char)(temp_c);
-  digit_1 = ((digit_1 % 100) / 10) % 10;
-  display_number(0, digit_1);
-  digit_2 = digit_2%10;
-  display_number(1, digit_2);
-  unsigned char first_presision_digit = (unsigned char)(temp_c * 10.0);
-  first_presision_digit = first_presision_digit % 10;
-  display_number(3, first_presision_digit);
-  delay(5000);
-//   char temp_str[4];
-//   sprintf(temp_str, "%2.1lf")
+      char log_line[40];
 
-  // TODO threading?
-  // Display time on LED matrix
+      sprintf(        //
+          log_line,   //
+          "%lu\t%s",  //
+          unix_ts,    //
+          temp_str    //
+      );
 
-  if (SD_OK){
+      // sprintf(          //
+      //     log_line,     //
+      //     "%lu\t%.1f",  //
+      //     unix_ts,      //
+      //     temp_c        //
+      // );
+      Serial.println(F("log line"));
+      Serial.print(log_line);
+      Serial.println(F("|"));
+      sd_file_obj.println(log_line);
+      sd_file_obj.close();
+      Serial.println(F("log written to SD card"));
+    }
+
+    // TODO
     // reading file from SD card
     sd_file_obj = SD.open("test.txt");
-    if (sd_file_obj){
+    if (sd_file_obj)
+    {
       // Serial.println("test.txt:");
       // read from the file until there's nothing else in it:
       Serial.println(F("content of test.txt file from SD card"));
-      while (sd_file_obj.available()){
+      while (sd_file_obj.available())
+      {
         Serial.write(sd_file_obj.read());
       }
 
       // close the file:
       sd_file_obj.close();
-    }else{
+    }
+    else
+    {
       // if the file didn't open, print an error
       Serial.println(F("failed to open test.txt"));
     }
+  }
+  else
+  {
   }
 
   delay(1000);
   analogWrite(L9110_B_1A, LOW);
 
-  for(int led_addr = 0; led_addr < 4; led_addr++){
+  for (int led_addr = 0; led_addr < 4; led_addr++)
+  {
     lc.clearDisplay(led_addr);
-    for(int row_idx = 0; row_idx < 8; row_idx++){
-      for(int col_idx = 0; col_idx < 8; col_idx++){
+    for (int row_idx = 0; row_idx < 8; row_idx++)
+    {
+      for (int col_idx = 0; col_idx < 8; col_idx++)
+      {
         lc.setLed(led_addr, row_idx, col_idx, true);
         // delay(100);
         // delay(50);
