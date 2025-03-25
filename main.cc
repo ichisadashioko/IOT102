@@ -632,9 +632,14 @@ void led_matrix_put_dot_for_temperature_display()
   lc.setLed(3, 7, 7, true);
 }
 
+double TEMPERATURE_THRESHOLD = 31.5;
+bool FORCE_FAN_ON = false;
+
 void setup()
 {
   Serial.begin(9600);
+  pinMode(HC05_TX, INPUT);
+  pinMode(HC05_RX, OUTPUT);
   BTSerial.begin(9600);
 
   pinMode(L9110_B_1A, OUTPUT);
@@ -729,6 +734,17 @@ void loop()
   Serial.print(temp_c);
   Serial.println(F(" *C"));
 
+  if(FORCE_FAN_ON){analogWrite(L9110_B_1A, 255);}else{
+    if (temp_c >= TEMPERATURE_THRESHOLD)
+    {
+      analogWrite(L9110_B_1A, 255);
+    }
+    else
+    {
+      analogWrite(L9110_B_1A, 0);
+    }
+  }
+
   clear_all_led_display();
   unsigned char digit_1, digit_2;
   digit_1 = digit_2 = (unsigned char)(temp_c);
@@ -741,8 +757,8 @@ void loop()
   display_number(2, first_presision_digit);
   display_C_character(3);
   led_matrix_put_dot_for_temperature_display();
-  delay(5000);
-  //   delay(500);
+  // delay(1000);
+  // delay(500);
   // char temp_str[4];
   // sprintf(temp_str, "%2.1lf")
 
@@ -832,27 +848,9 @@ void loop()
   {
   }
 
-  delay(1000);
-  analogWrite(L9110_B_1A, LOW);
+  if (BTSerial.available())
+  {
+  }
 
-  //   for (int led_addr = 0; led_addr < 4; led_addr++)
-  //   {
-  //     lc.clearDisplay(led_addr);
-  //     for (int row_idx = 0; row_idx < 8; row_idx++)
-  //     {
-  //       for (int col_idx = 0; col_idx < 8; col_idx++)
-  //       {
-  //         lc.setLed(led_addr, row_idx, col_idx, true);
-  //         // delay(100);
-  //         // delay(50);
-  //         // delay(10);
-  //         delay(10);
-  //       }
-  //       lc.clearDisplay(led_addr);
-  //     }
-  //     lc.clearDisplay(led_addr);
-  //   }
-  delay(1000);
-  analogWrite(L9110_B_1A, 255);
-  delay(1000);
+  delay(500);
 }
