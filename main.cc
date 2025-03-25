@@ -635,7 +635,7 @@ void led_matrix_put_dot_for_temperature_display()
 }
 
 double TEMPERATURE_THRESHOLD = 31.5;
-bool FORCE_FAN_ON = false;
+bool FORCE_FAN_ON            = false;
 
 void setup()
 {
@@ -736,7 +736,12 @@ void loop()
   Serial.print(temp_c);
   Serial.println(F(" *C"));
 
-  if(FORCE_FAN_ON){analogWrite(L9110_B_1A, 255);}else{
+  if (FORCE_FAN_ON)
+  {
+    analogWrite(L9110_B_1A, 255);
+  }
+  else
+  {
     if (temp_c >= TEMPERATURE_THRESHOLD)
     {
       analogWrite(L9110_B_1A, 255);
@@ -754,9 +759,8 @@ void loop()
   display_number(0, digit_1);
   digit_2 = digit_2 % 10;
   display_number(1, digit_2);
-  unsigned char first_presision_digit = (unsigned char)(temp_c * 10.0);
-  first_presision_digit               = first_presision_digit % 10;
-  display_number(2, first_presision_digit);
+  unsigned char first_decimal_digit = (unsigned char)((int)(temp_c * 10) % 10);
+  display_number(2, first_decimal_digit);
   display_C_character(3);
   led_matrix_put_dot_for_temperature_display();
   // delay(1000);
