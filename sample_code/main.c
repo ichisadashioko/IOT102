@@ -57,6 +57,7 @@ SoftwareSerial BTSerial(HC05_TX, HC05_RX);
 // |=============================================|
 // | B-1A | B-1B |    GND | VCC    | A-1A | A-1B |
 // |=============================================|
+#define L9110_B_1A 5
 
 double lm35_get_temperature()
 {
@@ -67,17 +68,25 @@ double lm35_get_temperature()
   return celsius_temperature_value;
 }
 
+RTC_DS3231 rtc_clock;
+DateTime dt_obj;
+// TODO sync datetime from phone
+
+File sd_file_obj;
+
 void setup()
 {
-  pinMode(LM35_PIN, INPUT);
   Serial.begin(9600);
-  while (!Serial)
-  {
-    // wait for serial port to connect. Needed for native USB port only
-  }
+  BTSerial.begin(9600);
+
+  pinMode(L9110_B_1A, OUTPUT);
+  // analogWrite(L9110_B_1A, LOW);
+  analogWrite(L9110_B_1A, 255);
+  pinMode(LM35_PIN, INPUT);
+
+  // while (!Serial) { }
 
   // Initialize LED matrix
-
   int device_count = lc.getDeviceCount();
   for (int device_idx = 0; device_idx < device_count; device_idx++)
   {
@@ -86,44 +95,25 @@ void setup()
     lc.clearDisplay(device_idx);
   }
 
-  if (SD.begin(SD_CARD_CS_PIN))
-  {
-    SD_OK = true;
-  }
-  else
-  {
+  if (SD.begin(SD_CARD_CS_PIN)) { SD_OK = true; }
+  else {
     Serial.println(F("init SD failed!"));
     // Serial.println(F("SD"));
-    // while (1)
-    // {
-    // }
+    // while (1) {}
   }
 
   // initialize RTC
-  if (rtc_clock.begin())
-  {
-    DS3231_OK = true;
-  }
-  else
-  {
+  if (rtc_clock.begin()) { DS3231_OK = true; }
+  else {
     Serial.println(F("could not find RTC"));
     // Serial.println(F("RTC"));
-    while (1)
-    {
-    }
+    while (1) {}
   }
 }
 
-RTC_DS3231 rtc_clock;
-DateTime dt_obj;
-// TODO sync datetime from phone
-
-File sd_file_obj;
-
 void loop()
 {
-  if (DS3231_OK)
-  {
+  if (DS3231_OK){
     Serial.println(F("- DS3231"));
     dt_obj = rtc_clock.now();
 
@@ -151,24 +141,20 @@ void loop()
   // TODO threading?
   // Display time on LED matrix
 
-  if (SD_OK)
-  {
+  if (SD_OK){
     // reading file from SD card
     sd_file_obj = SD.open("test.txt");
-    if (sd_file_obj)
-    {
+    if (sd_file_obj){
       // Serial.println("test.txt:");
       // read from the file until there's nothing else in it:
-      while (sd_file_obj.available())
-      {
+      Serial.println(F("content of test.txt file from SD card"));
+      while (sd_file_obj.available()){
         Serial.write(sd_file_obj.read());
       }
 
       // close the file:
       sd_file_obj.close();
-    }
-    else
-    {
+    }else{
       // if the file didn't open, print an error
       Serial.println(F("failed to open test.txt"));
     }
