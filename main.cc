@@ -758,19 +758,39 @@ void write_log_to_sd_card(double temp_c, uint32_t unix_ts)
 void handle_bluetooth_communication()
 {
   int cmd_code = BTSerial.read();
+  Serial.print("handle_bluetooth_communication - cmd_code: ");
+  Serial.println(cmd_code);
   if (cmd_code == BT_CMD_CODE_SET_THRESHOLD)
   {
+    byte floatBytes[4];
+    // Read 4 bytes into the array
+    for (int i = 0; i < 4; i++) {
+        floatBytes[i] = BTSerial.read();
+        Serial.println(floatBytes[i]);
+    }
+
+    // Convert bytes to float (Little Endian)
+    float receivedValue;
+    memcpy(&receivedValue, floatBytes, 4);
+
+    Serial.print("New temperature theshold: ");
+    Serial.println(receivedValue);
+    TEMPERATURE_THRESHOLD = receivedValue;
     // TODO
   }
   else if (cmd_code == BT_CMD_CODE_ENABLE_FAN)
   {
     FORCE_FAN_ON = true;
-    BTSerial.write((unsigned char)0);
+    
+  analogWrite(L9110_B_1A, 255);
+    // BTSerial.write((unsigned char)0);
   }
   else if (cmd_code == BT_CMD_CODE_DISABLE_FAN)
   {
     FORCE_FAN_ON = false;
-    BTSerial.write((unsigned char)0);
+    
+  analogWrite(L9110_B_1A, 0);
+    // BTSerial.write((unsigned char)0);
   }
   else if (cmd_code == BT_CMD_CODE_DOWNLOAD_DATA)
   {
@@ -817,7 +837,7 @@ void handle_bluetooth_communication()
             Serial.print(file_size);
             Serial.print(F(" SENT_COUNT: "));
             Serial.print(bluetooth_total_sent_byte_count);
-            Serial.print(F("\r"));
+            Serial.print(F("\n"));
 
             sent_count = BTSerial.write(read_buffer + total_sent_count, remain_byte_count);
             if (sent_count < 1)
@@ -858,6 +878,7 @@ void setup()
   pinMode(HC05_TX, INPUT);
   pinMode(HC05_RX, OUTPUT);
   BTSerial.begin(9600);
+  // BTSerial.begin(38400);
 
   pinMode(L9110_B_1A, OUTPUT);
   // analogWrite(L9110_B_1A, LOW);
