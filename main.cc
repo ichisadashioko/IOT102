@@ -422,6 +422,9 @@ DateTime dt_obj;
 
 File sd_file_obj;
 
+double TEMPERATURE_THRESHOLD = 31.5;
+bool FORCE_FAN_ON            = false;
+
 // clang-format off
 
 const uint8_t _LED_8x8_DIGITS[10][8] = {
@@ -746,9 +749,6 @@ void write_log_to_sd_card(double temp_c, uint32_t unix_ts)
   }
 }
 
-double TEMPERATURE_THRESHOLD = 31.5;
-bool FORCE_FAN_ON            = false;
-
 #define BT_CMD_CODE_SET_THRESHOLD 1
 #define BT_CMD_CODE_ENABLE_FAN    2
 #define BT_CMD_CODE_DISABLE_FAN   3
@@ -922,7 +922,7 @@ void setup()
   }
   else
   {
-    Serial.println(F("could not find RTC"));
+    Serial.println(F("could not find RTC! STOP AT SETUP"));
     // Serial.println(F("RTC"));
     while (1)
     {
@@ -937,6 +937,10 @@ void setup()
   //   display_number(2, 1);
   //   display_number(3, 8);
   //   display_C_character(3);
+  //   display_number(0, 9);
+  //   display_number(1, 2);
+  //   display_number(2, 2);
+  //   display_number(3, 8);
   //   led_matrix_put_dot_for_temperature_display();
   //   while (1)
   //   {
@@ -945,11 +949,14 @@ void setup()
 
 void loop()
 {
-  // double temp_c = lm35_get_temperature();
+  Serial.print(F("TEMPERATURE_THRESHOLD: "));
+  Serial.println(TEMPERATURE_THRESHOLD);
+
   double temp_c = dht11_get_temperature();
   Serial.print(F("- DHT11: "));
   Serial.print(temp_c);
   Serial.println(F(" *C"));
+
   control_fan(temp_c);
   // Display time on LED matrix
   display_temperature_on_led_matrix(temp_c);
