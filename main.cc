@@ -319,6 +319,28 @@ void led_matrix_put_dot_for_temperature_display()
   lc.setLed(3, 6, 7, true);
 }
 
+double CURRENT_TEMPERATURE = 0.0;
+
+void control_fan()
+{
+  double temp_c = CURRENT_TEMPERATURE;
+  if (FORCE_FAN_ON)
+  {
+    analogWrite(L9110_B_1A, 255);
+  }
+  else
+  {
+    if (temp_c >= TEMPERATURE_THRESHOLD)
+    {
+      analogWrite(L9110_B_1A, 255);
+    }
+    else
+    {
+      analogWrite(L9110_B_1A, 0);
+    }
+  }
+}
+
 void control_fan(double temp_c)
 {
   if (FORCE_FAN_ON)
@@ -495,13 +517,13 @@ void handle_bluetooth_communication()
   else if (cmd_code == BT_CMD_CODE_ENABLE_FAN)
   {
     FORCE_FAN_ON = true;
-    analogWrite(L9110_B_1A, 255);
+    control_fan();
     BTSerial.write((unsigned char)0);
   }
   else if (cmd_code == BT_CMD_CODE_DISABLE_FAN)
   {
     FORCE_FAN_ON = false;
-    analogWrite(L9110_B_1A, 0);
+    control_fan();
     BTSerial.write((unsigned char)0);
   }
   else if (cmd_code == BT_CMD_CODE_DOWNLOAD_DATA)
@@ -525,7 +547,6 @@ void setup()
   BTSerial.begin(9600);
 
   pinMode(L9110_B_1A, OUTPUT);
-  // analogWrite(L9110_B_1A, LOW);
   analogWrite(L9110_B_1A, 255);
   dht.setup(DHT11_PIN);
 
@@ -621,6 +642,7 @@ void loop()
 
   double _temp_start_ms = (double) millis();
   double temp_c = dht11_get_temperature();
+  CURRENT_TEMPERATURE = temp_c;
   Serial.print(F("- DHT11: "));
   Serial.print(temp_c);
   Serial.println(F(" *C"));
