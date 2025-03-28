@@ -443,7 +443,7 @@ void write_log_to_sd_card(double temp_c, uint32_t unix_ts)
 
 void sendLast20Lines() {
     File sd_file_obj = SD.open(SD_CARD_LOG_FILEPATH, FILE_READ);
-    
+
     if (!sd_file_obj) {
         return; // File not found or error opening
     }

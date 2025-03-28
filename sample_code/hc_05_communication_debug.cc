@@ -42,14 +42,14 @@ void handle_bluetooth_communication()
   else if (cmd_code == BT_CMD_CODE_ENABLE_FAN)
   {
     // FORCE_FAN_ON = true;
-    
+
   // analogWrite(L9110_B_1A, 255);
     BTSerial.write((unsigned char)0);
   }
   else if (cmd_code == BT_CMD_CODE_DISABLE_FAN)
   {
     // FORCE_FAN_ON = false;
-    
+
   // analogWrite(L9110_B_1A, 0);
     BTSerial.write((unsigned char)0);
     Serial.println("BT_CMD_CODE_DISABLE_FAN");
