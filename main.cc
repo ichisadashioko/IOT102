@@ -1,337 +1,4 @@
-/******************************************************************
-  DHT Temperature & Humidity Sensor library for Arduino.
-
-  Features:
-  - Support for DHT11 and DHT22/AM2302/RHT03
-  - Auto detect sensor model
-  - Very low memory footprint
-  - Very small code
-
-  http://www.github.com/markruys/arduino-DHT
-
-  Written by Mark Ruys, mark@paracas.nl.
-
-  BSD license, check license.txt for more information.
-  All text above must be included in any redistribution.
-
-  Datasheets:
-  - http://www.micro4you.com/files/sensor/DHT11.pdf
-  - http://www.adafruit.com/datasheets/DHT22.pdf
-  - http://dlnmh9ip6v2uc.cloudfront.net/datasheets/Sensors/Weather/RHT03.pdf
-  - http://meteobox.tk/files/AM2302.pdf
-
-  Changelog:
-   2013-06-10: Initial version
-   2013-06-12: Refactored code
-   2013-07-01: Add a resetTimer method
- ******************************************************************/
-
-#ifndef dht_h
-#define dht_h
-
-#if ARDUINO < 100
-#include <WProgram.h>
-#else
-#include <Arduino.h>
-#endif
-
-class DHT
-{
- public:
-  typedef enum
-  {
-    AUTO_DETECT,
-    DHT11,
-    DHT22,
-    AM2302,  // Packaged DHT22
-    RHT03    // Equivalent to DHT22
-  } DHT_MODEL_t;
-
-  typedef enum
-  {
-    ERROR_NONE = 0,
-    ERROR_TIMEOUT,
-    ERROR_CHECKSUM
-  } DHT_ERROR_t;
-
-  void setup(uint8_t pin, DHT_MODEL_t model = AUTO_DETECT);
-  void resetTimer();
-
-  float getTemperature();
-  float getHumidity();
-
-  DHT_ERROR_t getStatus() { return error; };
-  const char* getStatusString();
-
-  DHT_MODEL_t getModel() { return model; }
-
-  int getMinimumSamplingPeriod() { return model == DHT11 ? 1000 : 2000; }
-
-  int8_t getNumberOfDecimalsTemperature() { return model == DHT11 ? 0 : 1; };
-  int8_t getLowerBoundTemperature() { return model == DHT11 ? 0 : -40; };
-  int8_t getUpperBoundTemperature() { return model == DHT11 ? 50 : 125; };
-
-  int8_t getNumberOfDecimalsHumidity() { return 0; };
-  int8_t getLowerBoundHumidity() { return model == DHT11 ? 20 : 0; };
-  int8_t getUpperBoundHumidity() { return model == DHT11 ? 90 : 100; };
-
-  static float toFahrenheit(float fromCelcius) { return 1.8 * fromCelcius + 32.0; };
-  static float toCelsius(float fromFahrenheit) { return (fromFahrenheit - 32.0) / 1.8; };
-
- protected:
-  void readSensor();
-
-  float temperature;
-  float humidity;
-
-  uint8_t pin;
-
- private:
-  DHT_MODEL_t model;
-  DHT_ERROR_t error;
-  unsigned long lastReadTime;
-};
-
-#endif /*dht_h*/
-
-/******************************************************************
-  DHT Temperature & Humidity Sensor library for Arduino.
-
-  Features:
-  - Support for DHT11 and DHT22/AM2302/RHT03
-  - Auto detect sensor model
-  - Very low memory footprint
-  - Very small code
-
-  http://www.github.com/markruys/arduino-DHT
-
-  Written by Mark Ruys, mark@paracas.nl.
-
-  BSD license, check license.txt for more information.
-  All text above must be included in any redistribution.
-
-  Datasheets:
-  - http://www.micro4you.com/files/sensor/DHT11.pdf
-  - http://www.adafruit.com/datasheets/DHT22.pdf
-  - http://dlnmh9ip6v2uc.cloudfront.net/datasheets/Sensors/Weather/RHT03.pdf
-  - http://meteobox.tk/files/AM2302.pdf
-
-  Changelog:
-   2013-06-10: Initial version
-   2013-06-12: Refactored code
-   2013-07-01: Add a resetTimer method
- ******************************************************************/
-
-//  #include "DHT.h"
-
-void DHT::setup(uint8_t pin, DHT_MODEL_t model)
-{
-  DHT::pin   = pin;
-  DHT::model = model;
-  DHT::resetTimer();  // Make sure we do read the sensor in the next readSensor()
-
-  if (model == AUTO_DETECT)
-  {
-    DHT::model = DHT22;
-    readSensor();
-    if (error == ERROR_TIMEOUT)
-    {
-      DHT::model = DHT11;
-      // Warning: in case we auto detect a DHT11, you should wait at least 1000 msec
-      // before your first read request. Otherwise you will get a time out error.
-    }
-  }
-}
-
-void DHT::resetTimer()
-{
-  DHT::lastReadTime = millis() - 3000;
-}
-
-float DHT::getHumidity()
-{
-  readSensor();
-  return humidity;
-}
-
-float DHT::getTemperature()
-{
-  readSensor();
-  return temperature;
-}
-
-#ifndef OPTIMIZE_SRAM_SIZE
-
-const char* DHT::getStatusString()
-{
-  switch (error)
-  {
-    case DHT::ERROR_TIMEOUT:
-      return "TIMEOUT";
-
-    case DHT::ERROR_CHECKSUM:
-      return "CHECKSUM";
-
-    default:
-      return "OK";
-  }
-}
-
-#else
-
-// At the expense of 26 bytes of extra PROGMEM, we save 11 bytes of
-// SRAM by using the following method:
-
-prog_char P_OK[] PROGMEM       = "OK";
-prog_char P_TIMEOUT[] PROGMEM  = "TIMEOUT";
-prog_char P_CHECKSUM[] PROGMEM = "CHECKSUM";
-
-const char* DHT::getStatusString()
-{
-  prog_char* c;
-  switch (error)
-  {
-    case DHT::ERROR_CHECKSUM:
-      c = P_CHECKSUM;
-      break;
-
-    case DHT::ERROR_TIMEOUT:
-      c = P_TIMEOUT;
-      break;
-
-    default:
-      c = P_OK;
-      break;
-  }
-
-  static char buffer[9];
-  strcpy_P(buffer, c);
-
-  return buffer;
-}
-
-#endif
-
-void DHT::readSensor()
-{
-  // Make sure we don't poll the sensor too often
-  // - Max sample rate DHT11 is 1 Hz   (duty cicle 1000 ms)
-  // - Max sample rate DHT22 is 0.5 Hz (duty cicle 2000 ms)
-  unsigned long startTime = millis();
-  if ((unsigned long)(startTime - lastReadTime) < (model == DHT11 ? 999L : 1999L))
-  {
-    return;
-  }
-  lastReadTime = startTime;
-
-  temperature = NAN;
-  humidity    = NAN;
-
-  // Request sample
-
-  digitalWrite(pin, LOW);  // Send start signal
-  pinMode(pin, OUTPUT);
-  if (model == DHT11)
-  {
-    delay(18);
-  }
-  else
-  {
-    // This will fail for a DHT11 - that's how we can detect such a device
-    delayMicroseconds(800);
-  }
-
-  pinMode(pin, INPUT);
-  digitalWrite(pin, HIGH);  // Switch bus to receive data
-
-  // We're going to read 83 edges:
-  // - First a FALLING, RISING, and FALLING edge for the start bit
-  // - Then 40 bits: RISING and then a FALLING edge per bit
-  // To keep our code simple, we accept any HIGH or LOW reading if it's max 85 usecs long
-
-  uint16_t rawHumidity    = 0;
-  uint16_t rawTemperature = 0;
-  uint16_t data           = 0;
-
-  for (int8_t i = -3; i < 2 * 40; i++)
-  {
-    byte age;
-    startTime = micros();
-
-    do
-    {
-      age = (unsigned long)(micros() - startTime);
-      if (age > 90)
-      {
-        error = ERROR_TIMEOUT;
-        return;
-      }
-    } while (digitalRead(pin) == (i & 1) ? HIGH : LOW);
-
-    if (i >= 0 && (i & 1))
-    {
-      // Now we are being fed our 40 bits
-      data <<= 1;
-
-      // A zero max 30 usecs, a one at least 68 usecs.
-      if (age > 30)
-      {
-        data |= 1;  // we got a one
-      }
-    }
-
-    switch (i)
-    {
-      case 31:
-        rawHumidity = data;
-        break;
-      case 63:
-        rawTemperature = data;
-        data           = 0;
-        break;
-    }
-  }
-
-  // Verify checksum
-
-  if ((byte)(((byte)rawHumidity) + (rawHumidity >> 8) + ((byte)rawTemperature) + (rawTemperature >> 8)) != data)
-  {
-    error = ERROR_CHECKSUM;
-    return;
-  }
-
-  // Store readings
-
-  if (model == DHT11)
-  {
-    humidity    = rawHumidity >> 8;
-    temperature = rawTemperature >> 8;
-  }
-  else
-  {
-    humidity = rawHumidity * 0.1;
-
-    if (rawTemperature & 0x8000)
-    {
-      rawTemperature = -(int16_t)(rawTemperature & 0x7FFF);
-    }
-    temperature = ((int16_t)rawTemperature) * 0.1;
-  }
-
-  error = ERROR_NONE;
-}
-
-////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////
+#include "DHT.h"
 
 #include <SPI.h>
 #include <SD.h>
@@ -823,21 +490,19 @@ void handle_bluetooth_communication()
     Serial.print("New temperature theshold: ");
     Serial.println(receivedValue);
     TEMPERATURE_THRESHOLD = receivedValue;
-    // TODO
+    BTSerial.write((unsigned char)0);
   }
   else if (cmd_code == BT_CMD_CODE_ENABLE_FAN)
   {
     FORCE_FAN_ON = true;
-    
-  // analogWrite(L9110_B_1A, 255);
-    // BTSerial.write((unsigned char)0);
+    analogWrite(L9110_B_1A, 255);
+    BTSerial.write((unsigned char)0);
   }
   else if (cmd_code == BT_CMD_CODE_DISABLE_FAN)
   {
     FORCE_FAN_ON = false;
-    
-  // analogWrite(L9110_B_1A, 0);
-    // BTSerial.write((unsigned char)0);
+    analogWrite(L9110_B_1A, 0);
+    BTSerial.write((unsigned char)0);
   }
   else if (cmd_code == BT_CMD_CODE_DOWNLOAD_DATA)
   {
@@ -847,75 +512,7 @@ void handle_bluetooth_communication()
     }
     else
     {
-      sendLast20Lines();
-      // sd_file_obj = SD.open(SD_CARD_LOG_FILEPATH, FILE_READ);
-      // if (sd_file_obj)
-      // {
-      //   BTSerial.write((unsigned char)0);
-      //   uint32_t file_size = sd_file_obj.size();
-      //   BTSerial.write(file_size & 0xff);
-      //   BTSerial.write((file_size >> 8) & 0xff);
-      //   BTSerial.write((file_size >> 16) & 0xff);
-      //   BTSerial.write((file_size >> 24) & 0xff);
-
-      //   uint32_t bluetooth_total_sent_byte_count = 0;
-
-      //   char read_buffer[SD_CARD_READ_BUFFER_SIZE];
-      //   uint32_t total_read_count = 0;
-      //   // reading file data from SD card
-      //   while (1)
-      //   {
-      //     size_t read_count = sd_file_obj.readBytes(read_buffer, SD_CARD_READ_BUFFER_SIZE);
-      //     if (read_count < 1)
-      //     {
-      //       break;
-      //     }
-
-      //     total_read_count += read_count;
-
-      //     size_t total_sent_count  = 0;
-      //     size_t sent_count        = 0;
-      //     size_t remain_byte_count = read_count;
-
-      //     // sending data over serial interface
-      //     while (1)
-      //     {
-      //       Serial.print(F("BLUETOOTH_SENDING_DATA: "));
-      //       Serial.print(F("FILE_SIZE: "));
-      //       Serial.print(file_size);
-      //       Serial.print(F(" SENT_COUNT: "));
-      //       Serial.print(bluetooth_total_sent_byte_count);
-      //       Serial.print(F("\n"));
-
-      //       sent_count = BTSerial.write(read_buffer + total_sent_count, remain_byte_count);
-      //       if (sent_count < 1)
-      //       {
-      //         break;
-      //       }
-
-      //       total_sent_count += sent_count;
-      //       remain_byte_count -= sent_count;
-      //       bluetooth_total_sent_byte_count += sent_count;
-
-      //       if (remain_byte_count == 0)
-      //       {
-      //         break;
-      //       }
-      //     }
-
-      //     if (sent_count < 1)
-      //     {
-      //       break;
-      //     }
-      //   }
-
-      //   Serial.print(F("\n\nEND_BLUETOOTH_SENDING_DATA\n"));
-      // }
-      // else
-      // {
-      //   Serial.println(F("failed to open file on SD card"));
-      //   BTSerial.write((unsigned char)1);
-      // }
+      BTSerial.write((unsigned char)0);
     }
   }
 }
@@ -926,15 +523,13 @@ void setup()
   pinMode(HC05_TX, INPUT);
   pinMode(HC05_RX, OUTPUT);
   BTSerial.begin(9600);
-  // BTSerial.begin(38400);
 
   pinMode(L9110_B_1A, OUTPUT);
   // analogWrite(L9110_B_1A, LOW);
   analogWrite(L9110_B_1A, 255);
-  // pinMode(LM35_PIN, INPUT);
   dht.setup(DHT11_PIN);
 
-  // while (!Serial) { }
+  while (!Serial) { }
 
   // Initialize LED matrix
   int device_count = lc.getDeviceCount();
@@ -1016,49 +611,73 @@ void setup()
   //   }
 }
 
+unsigned long last_log_time_ms = 0;
+unsigned long log_interval_ms = 1000;
+
 void loop()
 {
   Serial.print(F("TEMPERATURE_THRESHOLD: "));
   Serial.println(TEMPERATURE_THRESHOLD);
 
+  double _temp_start_ms = (double) millis();
   double temp_c = dht11_get_temperature();
   Serial.print(F("- DHT11: "));
   Serial.print(temp_c);
   Serial.println(F(" *C"));
+  double _temp_time_ns = ((double)millis()) - _temp_start_ms;
+  Serial.print("TEMP_TIME_MS: ");
+  Serial.println(_temp_time_ns);
 
-  control_fan(temp_c);
+  double _led_start_ms = (double) millis();
   // Display time on LED matrix
   display_temperature_on_led_matrix(temp_c);
+  double _led_time_ms = ((double) millis()) - _led_start_ms;
+  Serial.print("_led_time_ms: ");
+  Serial.println(_led_time_ms);
+
+  control_fan(temp_c);
 
   if (DS3231_OK && SD_OK)
   {
-    Serial.println(F("- DS3231"));
-    dt_obj           = rtc_clock.now();
-    uint32_t unix_ts = dt_obj.unixtime();
+    unsigned long current_time_ms = millis();
+    if((current_time_ms - last_log_time_ms) >= log_interval_ms){
+      last_log_time_ms = current_time_ms;
 
-    char date_time_str[20];
-    sprintf(                              //
-        date_time_str,                    //
-        "%04d-%02d-%02d %02d:%02d:%02d",  // 4+1+2+1+2+1+2*3+2=19
-        dt_obj.year(),                    //
-        dt_obj.month(),                   //
-        dt_obj.dayOfTheWeek(),            //
-        dt_obj.hour(),                    //
-        dt_obj.minute(),                  //
-        dt_obj.second()                   //
-    );
+      Serial.println(F("- DS3231"));
+      dt_obj           = rtc_clock.now();
+      uint32_t unix_ts = dt_obj.unixtime();
 
-    date_time_str[19] = '\0';
-    Serial.println(date_time_str);
+      char date_time_str[20];
+      sprintf(                              //
+          date_time_str,                    //
+          "%04d-%02d-%02d %02d:%02d:%02d",  // 4+1+2+1+2+1+2*3+2=19
+          dt_obj.year(),                    //
+          dt_obj.month(),                   //
+          dt_obj.dayOfTheWeek(),            //
+          dt_obj.hour(),                    //
+          dt_obj.minute(),                  //
+          dt_obj.second()                   //
+      );
 
-    write_log_to_sd_card(temp_c, unix_ts);
-    sd_card_test_read_ascii_art();
+      date_time_str[19] = '\0';
+      Serial.println(date_time_str);
+
+      write_log_to_sd_card(temp_c, unix_ts);
+      // sd_card_test_read_ascii_art();
+    }
+
+    double _total_time = ((double)millis()) - ((double)current_time_ms);
+    Serial.print("SD_total_time: ");
+    Serial.println(_total_time);
+  }else{
+    Serial.print("DS3231_OK: ");
+    Serial.println(DS3231_OK);
+    Serial.print("SD_OK: ");
+    Serial.println(SD_OK);
   }
 
   if (BTSerial.available())
   {
     handle_bluetooth_communication();
   }
-
-  delay(500);
 }
