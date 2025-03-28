@@ -749,6 +749,53 @@ void write_log_to_sd_card(double temp_c, uint32_t unix_ts)
   }
 }
 
+#define MAX_LINES 20
+#define MAX_LINE_LENGTH 64  // Adjust this based on expected line length
+
+void sendLast20Lines() {
+    File sd_file_obj = SD.open(SD_CARD_LOG_FILEPATH, FILE_READ);
+    
+    if (!sd_file_obj) {
+        return; // File not found or error opening
+    }
+
+    BTSerial.write((unsigned char)0);
+
+    // Array to store last 20 lines
+    String lastLines[MAX_LINES];
+    int lineCount = 0;
+
+    // Read file line by line
+    String line = "";
+    while (sd_file_obj.available()) {
+        char c = sd_file_obj.read();
+        if (c == '\n') {
+            if (line.length() > 0) {
+                if (lineCount < MAX_LINES) {
+                    lastLines[lineCount] = line;
+                } else {
+                    // Shift lines up and add new one at the end
+                    for (int i = 1; i < MAX_LINES; i++) {
+                        lastLines[i - 1] = lastLines[i];
+                    }
+                    lastLines[MAX_LINES - 1] = line;
+                }
+                lineCount++;
+            }
+            line = "";
+        } else {
+            line += c;
+        }
+    }
+    sd_file_obj.close();
+
+    // Send last 20 lines over Bluetooth
+    for (int i = 0; i < min(lineCount, MAX_LINES); i++) {
+        BTSerial.println(lastLines[i]);
+    }
+}
+
+
 #define BT_CMD_CODE_SET_THRESHOLD 1
 #define BT_CMD_CODE_ENABLE_FAN    2
 #define BT_CMD_CODE_DISABLE_FAN   3
@@ -782,14 +829,14 @@ void handle_bluetooth_communication()
   {
     FORCE_FAN_ON = true;
     
-  analogWrite(L9110_B_1A, 255);
+  // analogWrite(L9110_B_1A, 255);
     // BTSerial.write((unsigned char)0);
   }
   else if (cmd_code == BT_CMD_CODE_DISABLE_FAN)
   {
     FORCE_FAN_ON = false;
     
-  analogWrite(L9110_B_1A, 0);
+  // analogWrite(L9110_B_1A, 0);
     // BTSerial.write((unsigned char)0);
   }
   else if (cmd_code == BT_CMD_CODE_DOWNLOAD_DATA)
@@ -800,74 +847,75 @@ void handle_bluetooth_communication()
     }
     else
     {
-      sd_file_obj = SD.open(SD_CARD_LOG_FILEPATH, FILE_READ);
-      if (sd_file_obj)
-      {
-        BTSerial.write((unsigned char)0);
-        uint32_t file_size = sd_file_obj.size();
-        BTSerial.write(file_size & 0xff);
-        BTSerial.write((file_size >> 8) & 0xff);
-        BTSerial.write((file_size >> 16) & 0xff);
-        BTSerial.write((file_size >> 24) & 0xff);
+      sendLast20Lines();
+      // sd_file_obj = SD.open(SD_CARD_LOG_FILEPATH, FILE_READ);
+      // if (sd_file_obj)
+      // {
+      //   BTSerial.write((unsigned char)0);
+      //   uint32_t file_size = sd_file_obj.size();
+      //   BTSerial.write(file_size & 0xff);
+      //   BTSerial.write((file_size >> 8) & 0xff);
+      //   BTSerial.write((file_size >> 16) & 0xff);
+      //   BTSerial.write((file_size >> 24) & 0xff);
 
-        uint32_t bluetooth_total_sent_byte_count = 0;
+      //   uint32_t bluetooth_total_sent_byte_count = 0;
 
-        char read_buffer[SD_CARD_READ_BUFFER_SIZE];
-        uint32_t total_read_count = 0;
-        // reading file data from SD card
-        while (1)
-        {
-          size_t read_count = sd_file_obj.readBytes(read_buffer, SD_CARD_READ_BUFFER_SIZE);
-          if (read_count < 1)
-          {
-            break;
-          }
+      //   char read_buffer[SD_CARD_READ_BUFFER_SIZE];
+      //   uint32_t total_read_count = 0;
+      //   // reading file data from SD card
+      //   while (1)
+      //   {
+      //     size_t read_count = sd_file_obj.readBytes(read_buffer, SD_CARD_READ_BUFFER_SIZE);
+      //     if (read_count < 1)
+      //     {
+      //       break;
+      //     }
 
-          total_read_count += read_count;
+      //     total_read_count += read_count;
 
-          size_t total_sent_count  = 0;
-          size_t sent_count        = 0;
-          size_t remain_byte_count = read_count;
+      //     size_t total_sent_count  = 0;
+      //     size_t sent_count        = 0;
+      //     size_t remain_byte_count = read_count;
 
-          // sending data over serial interface
-          while (1)
-          {
-            Serial.print(F("BLUETOOTH_SENDING_DATA: "));
-            Serial.print(F("FILE_SIZE: "));
-            Serial.print(file_size);
-            Serial.print(F(" SENT_COUNT: "));
-            Serial.print(bluetooth_total_sent_byte_count);
-            Serial.print(F("\n"));
+      //     // sending data over serial interface
+      //     while (1)
+      //     {
+      //       Serial.print(F("BLUETOOTH_SENDING_DATA: "));
+      //       Serial.print(F("FILE_SIZE: "));
+      //       Serial.print(file_size);
+      //       Serial.print(F(" SENT_COUNT: "));
+      //       Serial.print(bluetooth_total_sent_byte_count);
+      //       Serial.print(F("\n"));
 
-            sent_count = BTSerial.write(read_buffer + total_sent_count, remain_byte_count);
-            if (sent_count < 1)
-            {
-              break;
-            }
+      //       sent_count = BTSerial.write(read_buffer + total_sent_count, remain_byte_count);
+      //       if (sent_count < 1)
+      //       {
+      //         break;
+      //       }
 
-            total_sent_count += sent_count;
-            remain_byte_count -= sent_count;
-            bluetooth_total_sent_byte_count += sent_count;
+      //       total_sent_count += sent_count;
+      //       remain_byte_count -= sent_count;
+      //       bluetooth_total_sent_byte_count += sent_count;
 
-            if (remain_byte_count == 0)
-            {
-              break;
-            }
-          }
+      //       if (remain_byte_count == 0)
+      //       {
+      //         break;
+      //       }
+      //     }
 
-          if (sent_count < 1)
-          {
-            break;
-          }
-        }
+      //     if (sent_count < 1)
+      //     {
+      //       break;
+      //     }
+      //   }
 
-        Serial.print(F("\n\nEND_BLUETOOTH_SENDING_DATA\n"));
-      }
-      else
-      {
-        Serial.println(F("failed to open file on SD card"));
-        BTSerial.write((unsigned char)1);
-      }
+      //   Serial.print(F("\n\nEND_BLUETOOTH_SENDING_DATA\n"));
+      // }
+      // else
+      // {
+      //   Serial.println(F("failed to open file on SD card"));
+      //   BTSerial.write((unsigned char)1);
+      // }
     }
   }
 }
