@@ -11,13 +11,13 @@
 
 // SD card
 #define SD_CARD_CS_PIN 10
-// SD:MISO -> R3:11
-// SD:MOSI -> R3:12
+// SD:MISO -> R3:12
+// SD:MOSI -> R3:11
 // SD:SCK -> R3:13
 // SD:CS -> R3:10
 
 #define SD_CARD_LOG_FILEPATH "IOT102.tsv"
-
+#define SD_CARD_ERROR_PIN 9
 // LM35
 // #define LM35_PIN A0
 #define DHT11_PIN 4
@@ -484,6 +484,18 @@ void sendLast20Lines() {
     }
 }
 
+void transfer_file_over_bluetooth(){
+  // encode and send file size
+  uint32_t file_size = sd_file_obj.size();
+  Serial.print("FILE_SIZE: ");
+  Serial.println(file_size);
+  BTSerial.write(file_size & 0xff);
+  BTSerial.write((file_size >> 8) & 0xff);
+  BTSerial.write((file_size >> 16) & 0xff);
+  BTSerial.write((file_size >> 24) & 0xff);
+  sd_file_obj.close();
+}
+
 
 #define BT_CMD_CODE_SET_THRESHOLD 1
 #define BT_CMD_CODE_ENABLE_FAN    2
@@ -498,6 +510,7 @@ void handle_bluetooth_communication()
   Serial.println(cmd_code);
   if (cmd_code == BT_CMD_CODE_SET_THRESHOLD)
   {
+    Serial.println("BT_CMD_CODE_SET_THRESHOLD");
     byte floatBytes[4];
     // Read 4 bytes into the array
     for (int i = 0; i < 4; i++) {
@@ -516,41 +529,61 @@ void handle_bluetooth_communication()
   }
   else if (cmd_code == BT_CMD_CODE_ENABLE_FAN)
   {
+    Serial.println("BT_CMD_CODE_ENABLE_FAN");
     FORCE_FAN_ON = true;
     control_fan();
     BTSerial.write((unsigned char)0);
   }
   else if (cmd_code == BT_CMD_CODE_DISABLE_FAN)
   {
+    Serial.println("BT_CMD_CODE_DISABLE_FAN");
     FORCE_FAN_ON = false;
     control_fan();
     BTSerial.write((unsigned char)0);
   }
   else if (cmd_code == BT_CMD_CODE_DOWNLOAD_DATA)
   {
+    Serial.println("BT_CMD_CODE_DOWNLOAD_DATA");
     if (!SD_OK)
     {
       BTSerial.write((unsigned char)1);
     }
     else
     {
-      BTSerial.write((unsigned char)0);
+      sd_file_obj = SD.open(SD_CARD_LOG_FILEPATH, FILE_READ);
+      if (!sd_file_obj)
+      {
+        Serial.print(F("SD card failed to open file "));
+        Serial.println(SD_CARD_LOG_FILEPATH);
+        BTSerial.write((unsigned char)1);
+      }else{
+        BTSerial.write((unsigned char)0);
+        transfer_file_over_bluetooth();
+      }
     }
+  }else{
+    Serial.print("unknown command code: ");
+    Serial.println(cmd_code);
+    // BTSerial.write((unsigned char)1);
   }
 }
 
 void setup()
 {
   Serial.begin(9600);
+  Serial.println("setup()");
   pinMode(HC05_TX, INPUT);
   pinMode(HC05_RX, OUTPUT);
+  pinMode(SD_CARD_ERROR_PIN, OUTPUT);
+  digitalWrite(SD_CARD_ERROR_PIN, LOW);
+  // digitalWrite(SD_CARD_ERROR_PIN, HIGH);
   BTSerial.begin(9600);
 
   pinMode(L9110_B_1A, OUTPUT);
   analogWrite(L9110_B_1A, 255);
   dht.setup(DHT11_PIN);
 
-  while (!Serial) { }
+  // while (!Serial) { }
 
   // Initialize LED matrix
   int device_count = lc.getDeviceCount();
@@ -580,11 +613,13 @@ void setup()
     else
     {
       Serial.println(F("failed to open log file for initialize new session"));
+      digitalWrite(SD_CARD_ERROR_PIN, HIGH);
     }
   }
   else
   {
     Serial.println(F("init SD failed!"));
+    digitalWrite(SD_CARD_ERROR_PIN, HIGH);
     // Serial.println(F("SD"));
     // while (1) {}
   }
@@ -592,6 +627,7 @@ void setup()
   // initialize RTC
   if (rtc_clock.begin())
   {
+    Serial.println(F("DS3231_OK"));
     DS3231_OK = true;
 
     if (rtc_clock.lostPower())
@@ -637,6 +673,7 @@ unsigned long log_interval_ms = 1000;
 
 void loop()
 {
+  Serial.println("loop()");
   Serial.print(F("TEMPERATURE_THRESHOLD: "));
   Serial.println(TEMPERATURE_THRESHOLD);
 
