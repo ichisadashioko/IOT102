@@ -383,33 +383,13 @@ double CURRENT_TEMPERATURE = 0.0;
 
 void control_fan()
 {
-  double temp_c = CURRENT_TEMPERATURE;
   if (FORCE_FAN_ON)
   {
     analogWrite(L9110_B_1A, 255);
   }
   else
   {
-    if (temp_c >= TEMPERATURE_THRESHOLD)
-    {
-      analogWrite(L9110_B_1A, 255);
-    }
-    else
-    {
-      analogWrite(L9110_B_1A, 0);
-    }
-  }
-}
-
-void control_fan(double temp_c)
-{
-  if (FORCE_FAN_ON)
-  {
-    analogWrite(L9110_B_1A, 255);
-  }
-  else
-  {
-    if (temp_c >= TEMPERATURE_THRESHOLD)
+    if (CURRENT_TEMPERATURE >= TEMPERATURE_THRESHOLD)
     {
       analogWrite(L9110_B_1A, 255);
     }
@@ -553,6 +533,31 @@ void transfer_file_over_bluetooth(){
   BTSerial.write((file_size >> 8) & 0xff);
   BTSerial.write((file_size >> 16) & 0xff);
   BTSerial.write((file_size >> 24) & 0xff);
+
+  int value;
+  uint32_t count = 0;
+  Serial.println(F("FILE_CONTENT\n"));
+  while (sd_file_obj.available()){
+    if(count >= file_size){
+      break;
+    }
+
+    value = sd_file_obj.read();
+    if(value < 0){
+      break;
+    }
+
+    count++;
+
+    Serial.write(value);
+    BTSerial.write(value);
+  }
+
+  Serial.println(F("\n\nEOF"));
+  Serial.print(count);
+  Serial.print(F("/"));
+  Serial.print(file_size);
+  Serial.print(F("\n"));
   sd_file_obj.close();
 }
 
@@ -561,7 +566,11 @@ void transfer_file_over_bluetooth(){
 #define BT_CMD_CODE_ENABLE_FAN    2
 #define BT_CMD_CODE_DISABLE_FAN   3
 #define BT_CMD_CODE_DOWNLOAD_DATA 4
+#define BT_CMD_CODE_GET_TEMPERATURE 5
+#define BT_CMD_CODE_GET_FORCE_FAN_ON_STATUS 5
 #define SD_CARD_READ_BUFFER_SIZE  16
+
+unsigned char double_buffer[4];
 
 void handle_bluetooth_communication()
 {
@@ -571,16 +580,15 @@ void handle_bluetooth_communication()
   if (cmd_code == BT_CMD_CODE_SET_THRESHOLD)
   {
     Serial.println(F("BT_CMD_CODE_SET_THRESHOLD"));
-    byte floatBytes[4];
     // Read 4 bytes into the array
     for (int i = 0; i < 4; i++) {
-        floatBytes[i] = BTSerial.read();
-        Serial.println(floatBytes[i]);
+        double_buffer[i] = BTSerial.read();
+        Serial.println(double_buffer[i]);
     }
 
     // Convert bytes to float (Little Endian)
     float receivedValue;
-    memcpy(&receivedValue, floatBytes, 4);
+    memcpy(&receivedValue, double_buffer, 4);
 
     Serial.print(F("New temperature theshold: "));
     Serial.println(receivedValue);
@@ -621,7 +629,22 @@ void handle_bluetooth_communication()
         transfer_file_over_bluetooth();
       }
     }
-  }else{
+  }else if (cmd_code == BT_CMD_CODE_GET_TEMPERATURE){
+    Serial.println(F("BT_CMD_CODE_GET_TEMPERATURE"));
+    memcpy(double_buffer, &CURRENT_TEMPERATURE, 4);
+    BTSerial.write(double_buffer[0]);
+    BTSerial.write(double_buffer[1]);
+    BTSerial.write(double_buffer[2]);
+    BTSerial.write(double_buffer[3]);
+  }else if (cmd_code == BT_CMD_CODE_GET_FORCE_FAN_ON_STATUS){
+    Serial.println(F("BT_CMD_CODE_GET_FORCE_FAN_ON_STATUS"));
+    if(FORCE_FAN_ON){
+      BTSerial.write((unsigned char)1);
+    }else{
+      BTSerial.write((unsigned char)0);
+    }
+  }
+  else{
     Serial.print(F("unknown command code: "));
     Serial.println(cmd_code);
     // BTSerial.write((unsigned char)1);
@@ -742,10 +765,9 @@ void loop()
   Serial.println(TEMPERATURE_THRESHOLD);
 
   double _temp_start_ms = (double) millis();
-  double temp_c = dht11_get_temperature();
-  CURRENT_TEMPERATURE = temp_c;
+  CURRENT_TEMPERATURE = dht11_get_temperature();
   Serial.print(F("- DHT11: "));
-  Serial.print(temp_c);
+  Serial.print(CURRENT_TEMPERATURE);
   Serial.println(F(" *C"));
   double _temp_time_ns = ((double)millis()) - _temp_start_ms;
   Serial.print(F("TEMP_TIME_MS: "));
@@ -753,12 +775,12 @@ void loop()
 
   double _led_start_ms = (double) millis();
   // Display time on LED matrix
-  display_temperature_on_led_matrix(temp_c);
+  display_temperature_on_led_matrix(CURRENT_TEMPERATURE);
   double _led_time_ms = ((double) millis()) - _led_start_ms;
   Serial.print(F("_led_time_ms: "));
   Serial.println(_led_time_ms);
 
-  control_fan(temp_c);
+  control_fan();
 
   if (DS3231_OK && SD_OK)
   {
@@ -785,7 +807,7 @@ void loop()
       date_time_str[19] = '\0';
       Serial.println(date_time_str);
 
-      write_log_to_sd_card(temp_c, unix_ts);
+      write_log_to_sd_card(CURRENT_TEMPERATURE, unix_ts);
       // sd_card_test_read_ascii_art();
     }
 
