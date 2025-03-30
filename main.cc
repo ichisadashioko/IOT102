@@ -17,9 +17,6 @@
 // SD:CS -> R3:10
 
 #define SD_CARD_LOG_FILEPATH "IOT102.tsv"
-#define SD_CARD_ERROR_PIN 9
-// LM35
-// #define LM35_PIN A0
 #define DHT11_PIN 4
 
 // #include "DHT.h"
@@ -37,6 +34,78 @@ DHT dht;
 // MAX7219:DIN -> R3:6
 // initialize LED matrix
 LedControl lc = LedControl(MAX7219_DATA_PIN, MAX7219_CLK_PIN, MAX7219_CS_PIN, MAX7219_MAX_DEVICES);
+
+unsigned char MAX7219_PREVIOUS_BUFFER[32] = {0};
+unsigned char MAX7219_CURRENT_BUFFER[32] = {0};
+
+void set_led(int addr, int row, int col, bool state){
+  int x = (addr * 8) + col;
+  int y = row;
+  if((x < 0) || (x >= 32)){
+    Serial.print(F("set_led invalid x = "));
+    Serial.println(x);
+    return;
+  }
+
+  if((y < 0) || (y >= 8)){
+    Serial.print(F("set_led invalid y = "));
+    Serial.println(y);
+    return;
+  }
+
+  if(state){
+    MAX7219_CURRENT_BUFFER[x] |= (1 << y); // set bit
+  }else{
+    MAX7219_CURRENT_BUFFER[x] &= ~(1 << y); // clear bit
+  }
+}
+
+void clear_display(int addr){
+  if((addr < 0) || (addr >=4)){
+    return;
+  }
+
+  int x_start = addr * 8;
+  int x_end = (addr + 1) * 8;
+  for(int x = x_start; x < x_end; x++){
+    MAX7219_CURRENT_BUFFER[x] = 0;
+  }
+}
+
+void set_row(int addr, int row, unsigned char value){
+  if((addr < 0) || (addr >=4)){
+    return;
+  }
+
+  int x_start = (addr * 8);
+  for(int col = 0; col < 8; col++){
+    bool state = (value >> col) & 1;
+    int x = x_start + col;
+
+    if(state){
+      MAX7219_CURRENT_BUFFER[x] |= (1 << row); // set bit
+    }else{
+      MAX7219_CURRENT_BUFFER[x] &= ~(1 << row); // clear bit
+    }
+  }
+}
+
+void update_display(){
+  for(int x = 0; x < 32; x++){
+    if(MAX7219_CURRENT_BUFFER[x] != MAX7219_PREVIOUS_BUFFER[x]){
+      int addr = x / 8;
+      int col = x % 8;
+      for(int row = 0; row < 8; row++){
+        bool previous_state = (MAX7219_PREVIOUS_BUFFER[x] >> row) & 1;
+        bool current_state = (MAX7219_CURRENT_BUFFER[x] >> row) & 1;
+        if(previous_state != current_state){
+          lc.setLed(addr, row, col, current_state);
+        }
+      }
+      MAX7219_PREVIOUS_BUFFER[x] = MAX7219_CURRENT_BUFFER[x];
+    }
+  }
+}
 
 // DS3231:SCL -> R3:SCL
 // DS3231:SDA -> R3:SDA
@@ -242,19 +311,15 @@ void display_number(int led_addr, unsigned char input_number)
   {
     return;
   }
-  lc.clearDisplay(led_addr);
+  clear_display(led_addr);
   for (unsigned char row_idx = 0; row_idx < 8; row_idx++)
   {
-    // lc.setRow(led_addr, row_idx, _LED_8x8_DIGITS[input_number][row_idx]);
-    lc.setRow(led_addr, 7 - row_idx, _LED_8x8_DIGITS[input_number][row_idx]);
-    // lc.setColumn(led_addr, 7-row_idx, _LED_8x8_DIGITS[input_number][row_idx]);
-    // lc.setColumn(led_addr, row_idx, _LED_8x8_DIGITS[input_number][row_idx]);
-    // lc.setRow(led_addr, 8-row_idx, _LED_8x8_DIGITS[input_number][row_idx]);
-    for (unsigned char col_idx = 0; col_idx < 8; col_idx++)
-    {
-      bool led_state = (_LED_8x8_DIGITS[input_number][row_idx] >> col_idx & 1);
-      lc.setLed(led_addr, 7 - row_idx, col_idx, led_state);
-    }
+    set_row(led_addr, 7 - row_idx, _LED_8x8_DIGITS[input_number][row_idx]);
+    // for (unsigned char col_idx = 0; col_idx < 8; col_idx++)
+    // {
+    //   bool led_state = (_LED_8x8_DIGITS[input_number][row_idx] >> col_idx & 1);
+    //   set_led(led_addr, 7 - row_idx, col_idx, led_state);
+    // }
   }
 }
 
@@ -262,7 +327,7 @@ void clear_all_led_display()
 {
   for (unsigned char led_addr = 0; led_addr < MAX7219_MAX_DEVICES; led_addr++)
   {
-    lc.clearDisplay(led_addr);
+    clear_display(led_addr);
   }
 }
 
@@ -278,10 +343,10 @@ void display_colon(int led_addr)
   {
     return;
   }
-  lc.clearDisplay(led_addr);
+  clear_display(led_addr);
   for (unsigned char row_idx = 0; row_idx < 8; row_idx++)
   {
-    lc.setRow(led_addr, row_idx, _8x8_COLON[row_idx]);
+    set_row(led_addr, row_idx, _8x8_COLON[row_idx]);
   }
 }
 
@@ -295,28 +360,23 @@ void display_C_character(int led_addr)
   {
     return;
   }
-  lc.clearDisplay(led_addr);
+  clear_display(led_addr);
   for (unsigned char row_idx = 0; row_idx < 8; row_idx++)
   {
-    // lc.setRow(led_addr, row_idx, _8x8_CHAR_C[row_idx]);
-
     for (unsigned char col_idx = 0; col_idx < 8; col_idx++)
     {
       bool led_state = (_8x8_CHAR_C[row_idx] >> col_idx & 1);
-      lc.setLed(led_addr, 7 - row_idx, col_idx, led_state);
+      set_led(led_addr, 7 - row_idx, col_idx, led_state);
     }
   }
 }
 
 void led_matrix_put_dot_for_temperature_display()
 {
-  lc.setLed(1, 0, 0, true);
-  //   lc.setLed(1, 1, 0, true);
-  //   lc.setLed(2, 0, 7, true);
-  //   lc.setLed(2, 1, 7, true);
-  lc.setLed(3, 7, 7, true);
-  lc.setLed(3, 7, 6, true);
-  lc.setLed(3, 6, 7, true);
+  set_led(1, 0, 0, true);
+  set_led(3, 7, 7, true);
+  set_led(3, 7, 6, true);
+  set_led(3, 6, 7, true);
 }
 
 double CURRENT_TEMPERATURE = 0.0;
@@ -373,6 +433,7 @@ void display_temperature_on_led_matrix(double temp_c)
   display_number(2, first_decimal_digit);
   display_C_character(3);
   led_matrix_put_dot_for_temperature_display();
+  update_display();
 }
 
 void sd_card_test_read_ascii_art()
@@ -381,7 +442,6 @@ void sd_card_test_read_ascii_art()
   sd_file_obj = SD.open("test.txt");
   if (sd_file_obj)
   {
-    // Serial.println("test.txt:");
     // read from the file until there's nothing else in it:
     Serial.println(F("content of test.txt file from SD card"));
     while (sd_file_obj.available())
@@ -487,7 +547,7 @@ void sendLast20Lines() {
 void transfer_file_over_bluetooth(){
   // encode and send file size
   uint32_t file_size = sd_file_obj.size();
-  Serial.print("FILE_SIZE: ");
+  Serial.print(F("FILE_SIZE: "));
   Serial.println(file_size);
   BTSerial.write(file_size & 0xff);
   BTSerial.write((file_size >> 8) & 0xff);
@@ -506,11 +566,11 @@ void transfer_file_over_bluetooth(){
 void handle_bluetooth_communication()
 {
   int cmd_code = BTSerial.read();
-  Serial.print("handle_bluetooth_communication - cmd_code: ");
+  Serial.print(F("handle_bluetooth_communication - cmd_code: "));
   Serial.println(cmd_code);
   if (cmd_code == BT_CMD_CODE_SET_THRESHOLD)
   {
-    Serial.println("BT_CMD_CODE_SET_THRESHOLD");
+    Serial.println(F("BT_CMD_CODE_SET_THRESHOLD"));
     byte floatBytes[4];
     // Read 4 bytes into the array
     for (int i = 0; i < 4; i++) {
@@ -522,28 +582,28 @@ void handle_bluetooth_communication()
     float receivedValue;
     memcpy(&receivedValue, floatBytes, 4);
 
-    Serial.print("New temperature theshold: ");
+    Serial.print(F("New temperature theshold: "));
     Serial.println(receivedValue);
     TEMPERATURE_THRESHOLD = receivedValue;
     BTSerial.write((unsigned char)0);
   }
   else if (cmd_code == BT_CMD_CODE_ENABLE_FAN)
   {
-    Serial.println("BT_CMD_CODE_ENABLE_FAN");
+    Serial.println(F("BT_CMD_CODE_ENABLE_FAN"));
     FORCE_FAN_ON = true;
     control_fan();
     BTSerial.write((unsigned char)0);
   }
   else if (cmd_code == BT_CMD_CODE_DISABLE_FAN)
   {
-    Serial.println("BT_CMD_CODE_DISABLE_FAN");
+    Serial.println(F("BT_CMD_CODE_DISABLE_FAN"));
     FORCE_FAN_ON = false;
     control_fan();
     BTSerial.write((unsigned char)0);
   }
   else if (cmd_code == BT_CMD_CODE_DOWNLOAD_DATA)
   {
-    Serial.println("BT_CMD_CODE_DOWNLOAD_DATA");
+    Serial.println(F("BT_CMD_CODE_DOWNLOAD_DATA"));
     if (!SD_OK)
     {
       BTSerial.write((unsigned char)1);
@@ -562,7 +622,7 @@ void handle_bluetooth_communication()
       }
     }
   }else{
-    Serial.print("unknown command code: ");
+    Serial.print(F("unknown command code: "));
     Serial.println(cmd_code);
     // BTSerial.write((unsigned char)1);
   }
@@ -571,12 +631,9 @@ void handle_bluetooth_communication()
 void setup()
 {
   Serial.begin(9600);
-  Serial.println("setup()");
+  Serial.println(F("setup()"));
   pinMode(HC05_TX, INPUT);
   pinMode(HC05_RX, OUTPUT);
-  pinMode(SD_CARD_ERROR_PIN, OUTPUT);
-  digitalWrite(SD_CARD_ERROR_PIN, LOW);
-  // digitalWrite(SD_CARD_ERROR_PIN, HIGH);
   BTSerial.begin(9600);
 
   pinMode(L9110_B_1A, OUTPUT);
@@ -602,29 +659,34 @@ void setup()
     // SdVolume volume;
     // SdFile root;
     Serial.println(F("SD OK"));
-    sd_file_obj = SD.open(SD_CARD_LOG_FILEPATH, FILE_WRITE);
-    if (sd_file_obj)
-    {
-      // sd_file_obj.println(log_line);
-      sd_file_obj.write('\n');
-      sd_file_obj.close();
-      Serial.println(F("newline written to SD card"));
-    }
-    else
-    {
-      Serial.println(F("failed to open log file for initialize new session"));
-      digitalWrite(SD_CARD_ERROR_PIN, HIGH);
+    bool log_file_exist = SD.exists(SD_CARD_LOG_FILEPATH);
+    Serial.println(F("log_file_exist:"));
+    Serial.println(log_file_exist);
+    if(log_file_exist){
+      Serial.println(F("opening log file"));
+      sd_file_obj = SD.open(SD_CARD_LOG_FILEPATH, FILE_WRITE);
+      if (sd_file_obj)
+      {
+        // sd_file_obj.println(log_line);
+        sd_file_obj.write('\n');
+        sd_file_obj.close();
+        Serial.println(F("newline written to SD card"));
+      }
+      else
+      {
+        Serial.println(F("failed to open log file for initialize new session"));
+      }
     }
   }
   else
   {
     Serial.println(F("init SD failed!"));
-    digitalWrite(SD_CARD_ERROR_PIN, HIGH);
     // Serial.println(F("SD"));
     // while (1) {}
   }
 
   // initialize RTC
+  Serial.println(F("initializing RTC"));
   if (rtc_clock.begin())
   {
     Serial.println(F("DS3231_OK"));
@@ -632,7 +694,7 @@ void setup()
 
     if (rtc_clock.lostPower())
     {
-      Serial.println("RTC lost power, let's set the time!");
+      Serial.println(F("RTC lost power, let's set the time!"));
       // When time needs to be set on a new device, or after a power loss, the
       // following line sets the RTC to the date & time this sketch was compiled
       rtc_clock.adjust(DateTime(F(__DATE__), F(__TIME__)));
@@ -658,14 +720,16 @@ void setup()
   //   display_number(2, 1);
   //   display_number(3, 8);
   //   display_C_character(3);
-  //   display_number(0, 9);
-  //   display_number(1, 2);
-  //   display_number(2, 2);
-  //   display_number(3, 8);
-  //   led_matrix_put_dot_for_temperature_display();
-  //   while (1)
-  //   {
-  //   }
+  // display_number(0, 9);
+  // display_number(1, 2);
+  // display_number(2, 2);
+  // display_number(3, 8);
+  // led_matrix_put_dot_for_temperature_display();
+
+  // update_display();
+  // while (1)
+  // {
+  // }
 }
 
 unsigned long last_log_time_ms = 0;
@@ -673,8 +737,8 @@ unsigned long log_interval_ms = 1000;
 
 void loop()
 {
-  Serial.println("loop()");
-  Serial.print(F("TEMPERATURE_THRESHOLD: "));
+  // Serial.println(F("loop()"));
+  Serial.print(F("CURRENT_TEMPERATURE_THRESHOLD: "));
   Serial.println(TEMPERATURE_THRESHOLD);
 
   double _temp_start_ms = (double) millis();
@@ -684,14 +748,14 @@ void loop()
   Serial.print(temp_c);
   Serial.println(F(" *C"));
   double _temp_time_ns = ((double)millis()) - _temp_start_ms;
-  Serial.print("TEMP_TIME_MS: ");
+  Serial.print(F("TEMP_TIME_MS: "));
   Serial.println(_temp_time_ns);
 
   double _led_start_ms = (double) millis();
   // Display time on LED matrix
   display_temperature_on_led_matrix(temp_c);
   double _led_time_ms = ((double) millis()) - _led_start_ms;
-  Serial.print("_led_time_ms: ");
+  Serial.print(F("_led_time_ms: "));
   Serial.println(_led_time_ms);
 
   control_fan(temp_c);
@@ -726,12 +790,12 @@ void loop()
     }
 
     double _total_time = ((double)millis()) - ((double)current_time_ms);
-    Serial.print("SD_total_time: ");
+    Serial.print(F("SD_total_time: "));
     Serial.println(_total_time);
   }else{
-    Serial.print("DS3231_OK: ");
+    Serial.print(F("DS3231_OK: "));
     Serial.println(DS3231_OK);
-    Serial.print("SD_OK: ");
+    Serial.print(F("SD_OK: "));
     Serial.println(SD_OK);
   }
 
