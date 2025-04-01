@@ -500,8 +500,6 @@ void transfer_file_over_bluetooth(){
   Serial.println(F("SEEK_POS:"));
   Serial.println(seek_pos);
   sd_file_obj.seek(seek_pos);
-  // sd_file_obj.close();
-  // while(1){}
 
   int value;
   uint32_t count = 0;
