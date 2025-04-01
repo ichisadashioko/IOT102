@@ -478,59 +478,7 @@ void write_log_to_sd_card(double temp_c, uint32_t unix_ts)
   }
 }
 
-#define BLUETOOTH_MAX_LINES_TO_SEND 60
 #define BLUETOOTH_MAX_FILE_SIZE 4096
-
-// void transfer_file_over_bluetooth_last_x_lines(){
-//   // encode and send file size
-//   uint32_t file_size = sd_file_obj.size();
-//   Serial.print(F("FILE_SIZE: "));
-//   Serial.println(file_size);
-//   BTSerial.write(file_size & 0xff);
-//   BTSerial.write((file_size >> 8) & 0xff);
-//   BTSerial.write((file_size >> 16) & 0xff);
-//   BTSerial.write((file_size >> 24) & 0xff);
-
-//   int value;
-//   uint32_t count = 0;
-//   Serial.println(F("FILE_CONTENT\n"));
-
-//   uint32_t line_seek[BLUETOOTH_MAX_LINES_TO_SEND];
-//   int line_count_in_buffer = 0;
-
-//   while (sd_file_obj.available()){
-//     if(count >= file_size){
-//       break;
-//     }
-
-//     value = sd_file_obj.read();
-//     if(value < 0){
-//       break;
-//     }
-
-//     count++;
-
-//     if(value == '\n'){
-//       if(line_count_in_buffer < BLUETOOTH_MAX_LINES_TO_SEND){
-//         line_seek[line_count_in_buffer] = count;
-//         line_count_in_buffer++;
-//       }else{
-//         // shift data up to add new one at the end
-//         for(int i = 1; i < BLUETOOTH_MAX_LINES_TO_SEND; i++){
-//           line_seek[i - 1] = line_seek[i];
-//         }
-//         line_seek[BLUETOOTH_MAX_LINES_TO_SEND-1] = count;
-//       }
-//     }
-//   }
-
-//   Serial.println(F("\n\nEOF"));
-//   Serial.print(count);
-//   Serial.print(F("/"));
-//   Serial.print(file_size);
-//   Serial.print(F("\n"));
-//   sd_file_obj.close();
-// }
 
 void transfer_file_over_bluetooth(){
   // encode and send file size
@@ -541,6 +489,19 @@ void transfer_file_over_bluetooth(){
   BTSerial.write((file_size >> 8) & 0xff);
   BTSerial.write((file_size >> 16) & 0xff);
   BTSerial.write((file_size >> 24) & 0xff);
+
+  uint32_t seek_pos;
+  if(file_size <= BLUETOOTH_MAX_FILE_SIZE){
+    seek_pos = 0;
+  }else{
+    seek_pos = file_size - BLUETOOTH_MAX_FILE_SIZE;
+  }
+
+  Serial.println(F("SEEK_POS:"));
+  Serial.println(seek_pos);
+  sd_file_obj.seek(seek_pos);
+  // sd_file_obj.close();
+  // while(1){}
 
   int value;
   uint32_t count = 0;
